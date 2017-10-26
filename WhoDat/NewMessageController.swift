@@ -43,7 +43,7 @@ class NewMessageController: UITableViewController {
                         let account = Account()
                         account.id = snapshot.key
                         account.setValuesForKeys(dictionary)
-                        userCache.setObject(account, forKey: uid as AnyObject)
+                        userCache.setObject(account, forKey: account.id as AnyObject)
                         
                         if let representedUserId = representedValue as? String, representedUserId != "none" {
                             account.representedUserId = representedUserId
@@ -85,11 +85,11 @@ class NewMessageController: UITableViewController {
         return 72
     }
     
-    func handleCancel() {
+    @objc func handleCancel() {
         dismiss(animated: true, completion: nil)
     }
     
-    func handleAdd() {
+    @objc func handleAdd() {
         let alert = UIAlertController(title: "Add a friend", message: "Enter your friend's email", preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "Cancel", style: .default, handler: {(_) in }))
         

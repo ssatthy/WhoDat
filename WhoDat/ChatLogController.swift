@@ -38,11 +38,8 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         collectionView?.backgroundColor = UIColor.white
         collectionView?.register(MessageCell.self, forCellWithReuseIdentifier: cellId)
         collectionView?.keyboardDismissMode = .interactive
-    
-    }
-    
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
+        
+        setupKeyboardObservers()
         setGuessButton()
         observeUserMessages()
     }
@@ -74,7 +71,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     }
 
     
-    func handleGuess() {
+    @objc func handleGuess() {
         
         let accountViewController = AccountViewController()
         accountViewController.pretendingUser = account
@@ -130,6 +127,15 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         return true
     }
     
+    func setupKeyboardObservers() {
+        NotificationCenter.default.addObserver(self, selector: #selector(scrollToLastItem), name: NSNotification.Name.UIKeyboardDidShow, object: nil)
+    }
+    
+    @objc func scrollToLastItem() {
+        if messages.count == 0 {return}
+        self.collectionView?.scrollToItem(at: IndexPath(item: self.messages.count-1, section: 0), at: .bottom, animated: true)
+    }
+    
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         NotificationCenter.default.removeObserver(self)
@@ -145,7 +151,6 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         
         let ref = Database.database().reference().child("user-messages").child(uid).child(toId)
         ref.observe(.childAdded, with: {(snapshot) in
-            
             let messageId = snapshot.key
             self.fetchMessage(messageId: messageId)
         })
@@ -162,8 +167,8 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
             self.messages.append(message)
             DispatchQueue.main.async {
                 self.collectionView?.reloadData()
+                self.scrollToLastItem()
             }
-            
             
         })
     }
@@ -224,10 +229,10 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     private func estimateFrameForText(text: String) -> CGRect {
         let size = CGSize(width: 200, height: 1000)
         let options = NSStringDrawingOptions.usesFontLeading.union(.usesLineFragmentOrigin)
-        return NSString(string: text).boundingRect(with: size, options: options, attributes: [NSFontAttributeName: UIFont.systemFont(ofSize: 16)], context: nil)
+        return NSString(string: text).boundingRect(with: size, options: options, attributes: [NSAttributedStringKey.font: UIFont.systemFont(ofSize: 16)], context: nil)
     }
     
-    func handleSend() {
+    @objc func handleSend() {
         let ref = Database.database().reference().child("messages").childByAutoId()
         
         if let toId = account!.representedUserId, !inputTextField.text!.isEmpty {
@@ -316,7 +321,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     }
     
     
-    func updateImpersonation() {
+    @objc func updateImpersonation() {
         
         if unRepresentingUserIds.count > 0 {
             var impersonatingUserId = unRepresentingUserIds[0]
@@ -337,7 +342,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     private func waitForDataToBeFetched() {
         self.timer?.invalidate()
         
-        self.timer = Timer.scheduledTimer(timeInterval: 0.5, target: self, selector: #selector(self.updateImpersonation), userInfo: nil, repeats: false)
+        self.timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(self.updateImpersonation), userInfo: nil, repeats: false)
     }
     
     

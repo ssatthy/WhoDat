@@ -8,7 +8,7 @@
 
 import UIKit
 
-class Account: NSObject {
+@objcMembers class Account: NSObject {
 
     var id: String?
     var name: String?

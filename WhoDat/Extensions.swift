@@ -42,8 +42,7 @@ extension UIImageView {
 }
 
 
-let userCache = NSCache<AnyObject, AnyObject>()
-
+var userCache = NSCache<AnyObject, AnyObject>()
 
 extension UIViewController {
     
@@ -130,5 +129,15 @@ extension UIViewController {
         
         let emailTest = NSPredicate(format:"SELF MATCHES %@", emailRegEx)
         return emailTest.evaluate(with: testStr)
+    }
+    
+    func hideKeyboardWhenTappedAround() {
+        let tap: UITapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(UIViewController.dismissKeyboard))
+        tap.cancelsTouchesInView = false
+        view.addGestureRecognizer(tap)
+    }
+    
+    @objc func dismissKeyboard() {
+        view.endEditing(true)
     }
 }

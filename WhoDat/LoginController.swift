@@ -70,6 +70,7 @@ class LoginController: UIViewController {
         let email = UITextField()
         email.placeholder = "Email"
         email.translatesAutoresizingMaskIntoConstraints = false
+        email.keyboardType = UIKeyboardType.emailAddress
         return email
     }()
     
@@ -102,7 +103,7 @@ class LoginController: UIViewController {
     }()
     
 
-    func handleNewAccount() {
+    @objc func handleNewAccount() {
         mode = !mode
         newAccountLink.text = mode ? "Register?" : "Login?"
         handleLoginRegisterChange()
@@ -128,7 +129,7 @@ class LoginController: UIViewController {
         passwordFieldHeightAnchor?.isActive = true
         
     }
-    func handleLoginRegister() {
+    @objc func handleLoginRegister() {
         if mode {
             hanleLogin()
         } else {
@@ -148,6 +149,7 @@ class LoginController: UIViewController {
                 print(error ?? "Signin failed")
                 return
             }
+            userCache = NSCache<AnyObject, AnyObject>()
             self.messageController?.fetchUserAndSetNavBar()
             self.dismiss(animated: true, completion: nil)
         })
@@ -157,7 +159,7 @@ class LoginController: UIViewController {
         super.viewDidLoad()
         
         view.backgroundColor = UIColor(r: 61, g: 91, b: 151)
-        
+        self.hideKeyboardWhenTappedAround()
         view.addSubview(inputsContainerView)
         view.addSubview(loginRegisterButton)
         view.addSubview(profilePictureView)

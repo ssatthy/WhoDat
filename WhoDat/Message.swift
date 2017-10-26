@@ -9,7 +9,7 @@
 import UIKit
 import Firebase
 
-class Message: NSObject {
+@objcMembers class Message: NSObject {
     
     var fromId: String?
     var toId: String?

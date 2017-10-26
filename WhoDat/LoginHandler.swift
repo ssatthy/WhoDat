@@ -12,7 +12,7 @@ import Firebase
 
 extension LoginController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     
-    func handleProfilePicture() {
+    @objc func handleProfilePicture() {
         let picker = UIImagePickerController()
         picker.delegate = self
         picker.allowsEditing = true

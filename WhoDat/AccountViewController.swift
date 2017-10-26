@@ -43,7 +43,7 @@ class AccountViewController: UITableViewController {
                             let account = Account()
                             account.id = snapshot.key
                             account.setValuesForKeys(dictionary)
-                            userCache.setObject(account, forKey: uid as AnyObject)
+                            userCache.setObject(account, forKey: account.id as AnyObject)
                             
                             self.accounts.append(account)
                             DispatchQueue.main.async {
@@ -81,7 +81,7 @@ class AccountViewController: UITableViewController {
         return 72
     }
     
-    func handleCancel() {
+    @objc func handleCancel() {
         dismiss(animated: true, completion: nil)
     }
     
