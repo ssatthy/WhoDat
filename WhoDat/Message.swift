@@ -11,6 +11,7 @@ import Firebase
 
 @objcMembers class Message: NSObject {
     
+    var id: String?
     var fromId: String?
     var toId: String?
     var timestamp: NSNumber?

@@ -27,8 +27,11 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
             }
         }
     }
+    var lastMessageId: String?
     
     let cellId = "cellId"
+    
+    var refreshControl:UIRefreshControl!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -39,6 +42,12 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         collectionView?.register(MessageCell.self, forCellWithReuseIdentifier: cellId)
         collectionView?.keyboardDismissMode = .interactive
         
+        self.refreshControl = UIRefreshControl()
+        self.refreshControl.attributedTitle = NSAttributedString(string: "Pull to load more")
+        self.refreshControl.addTarget(self, action: #selector(observeUserMessages), for: UIControlEvents.valueChanged)
+        collectionView!.addSubview(refreshControl)
+        
+        messages = [Message]()
         setupKeyboardObservers()
         setGuessButton()
         observeUserMessages()
@@ -132,8 +141,10 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     }
     
     @objc func scrollToLastItem() {
-        if messages.count == 0 {return}
-        self.collectionView?.scrollToItem(at: IndexPath(item: self.messages.count-1, section: 0), at: .bottom, animated: true)
+        let lastSectionIndex = collectionView!.numberOfSections - 1
+        let lastItemIndex = collectionView!.numberOfItems(inSection: lastSectionIndex) - 1
+
+        self.collectionView?.scrollToItem(at: IndexPath(item: lastItemIndex, section: lastSectionIndex), at: .bottom, animated: true)
     }
     
     override func viewDidDisappear(_ animated: Bool) {
@@ -143,17 +154,25 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     
     var messages = [Message]()
     
-    func observeUserMessages() {
-        messages = [Message]()
+    @objc func observeUserMessages() {
+        
         guard let uid = Auth.auth().currentUser?.uid, let toId = account?.representedUserId else {
             return
         }
-        
-        let ref = Database.database().reference().child("user-messages").child(uid).child(toId)
-        ref.observe(.childAdded, with: {(snapshot) in
-            let messageId = snapshot.key
-            self.fetchMessage(messageId: messageId)
-        })
+        if messages.count == 0 {
+            let ref = Database.database().reference().child("user-messages").child(uid).child(toId).queryLimited(toLast: 13)
+            ref.observe(.childAdded, with: {(snapshot) in
+                let messageId = snapshot.key
+                self.fetchMessage(messageId: messageId)
+            })
+        } else {
+            lastMessageId = messages[0].id
+            let ref = Database.database().reference().child("user-messages").child(uid).child(toId).queryEnding(atValue: lastMessageId).queryLimited(toLast: 13)
+            ref.observe(.childAdded, with: {(snapshot) in
+                let messageId = snapshot.key
+                self.fetchMessage(messageId: messageId)
+            })
+        }
     }
     
     private func fetchMessage(messageId: String) {
@@ -164,7 +183,11 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
             
             let message = Message()
             message.setValuesForKeys(dictionary)
+            message.id = snapshot.key
             self.messages.append(message)
+            self.messages.sort(by: {(message1, message2) -> Bool in
+                return (message1.timestamp?.intValue)! < (message2.timestamp?.intValue)!
+            })
             DispatchQueue.main.async {
                 self.collectionView?.reloadData()
                 self.scrollToLastItem()
@@ -183,7 +206,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         cell.textView.text = message.message
         
         setupCell(cell: cell, message: message)
-        
+        cell.transform = collectionView.transform
         return cell
     }
     
@@ -199,7 +222,6 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
             cell.bubbleRightAnchor?.isActive = true
             cell.bubbleLeftAnchor?.isActive = false
         } else {
-            
             if let profileImageUrul = self.account?.profileImageUrl {
                 cell.bubbleProfile.loadImagesFromCache(urlString: profileImageUrul)
             }

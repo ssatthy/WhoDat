@@ -107,7 +107,7 @@ class MessageController: UITableViewController {
         self.setImpersonatingUserId(representedUserId: message.representedUserId()!, account: message.account!)
         messages = messages.filter{ $0.account?.id != message.account?.id! }
         self.messages.append(message)
-        //self.attemptToReloadOfTable()
+        
         self.messages.sort(by: {(message1, message2) -> Bool in
             return (message1.timestamp?.intValue)! > (message2.timestamp?.intValue)!
         })
@@ -115,26 +115,6 @@ class MessageController: UITableViewController {
             self.tableView.reloadData()
         }
     }
-    
-    var timer: Timer?
-    
-    private func attemptToReloadOfTable() {
-        self.timer?.invalidate()
-        
-        self.timer = Timer.scheduledTimer(timeInterval: 0.05, target: self, selector: #selector(self.handleReloadTable), userInfo: nil, repeats: false)
-    }
-    
-    
-    @objc func handleReloadTable() {
-        self.messages.sort(by: {(message1, message2) -> Bool in
-            return (message1.timestamp?.intValue)! > (message2.timestamp?.intValue)!
-        })
-        
-        DispatchQueue.main.async {
-            self.tableView.reloadData()
-        }
-    }
-
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return messages.count
