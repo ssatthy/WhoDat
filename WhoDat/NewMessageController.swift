@@ -45,9 +45,10 @@ class NewMessageController: UITableViewController {
                         account.setValuesForKeys(dictionary)
                         LocalUserRepository.shared().setObject(account)
                         
-                        if let representedUserId = representedValue as? String, representedUserId != "none" {
-                            account.representedUserId = representedUserId
-                            self.setImpersonatingUserId(representedUserId: representedUserId, account: account)
+                        if let dictionary = representedValue as? [String: String] {
+                            let map = Array(dictionary)[0]
+                            account.representedUserId = map.key
+                            account.impersonatingUserId = map.value
                         }
                         
                         self.accounts.append(account)

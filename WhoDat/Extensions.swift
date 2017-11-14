@@ -44,19 +44,6 @@ extension UIImageView {
 
 extension UIViewController {
     
-    func setImpersonatingUserId(representedUserId: String, account: Account) {
-        
-        guard let uid = Auth.auth().currentUser?.uid else {
-            return
-        }
-        let ref = Database.database().reference().child("connections").child(representedUserId).queryOrderedByValue().queryEqual(toValue: uid)
-        ref.observe(.childAdded, with: {(snapshot) in
-            account.impersonatingUserId = snapshot.key
-        })
-        
-    }
-    
-    
     func setNavBar(account: Account) {
         
         let titleBar = UIView()
@@ -73,9 +60,18 @@ extension UIViewController {
         foundIndicator.translatesAutoresizingMaskIntoConstraints = false
         foundIndicator.layer.cornerRadius = 22
         foundIndicator.layer.masksToBounds = true
+        foundIndicator.backgroundColor = UIColor(r: 61, g: 151, b: 61)
         foundIndicator.tag = 111
         
+        let beenCaughtIndicator = UIView()
+        beenCaughtIndicator.translatesAutoresizingMaskIntoConstraints = false
+        beenCaughtIndicator.layer.cornerRadius = 22
+        beenCaughtIndicator.layer.masksToBounds = true
+        beenCaughtIndicator.backgroundColor = UIColor(r: 151, g: 61, b: 61)
+        beenCaughtIndicator.tag = 222
+        
         containerView.addSubview(foundIndicator)
+        containerView.addSubview(beenCaughtIndicator)
         
         let profileImageView = UIImageView()
         containerView.addSubview(profileImageView)
@@ -84,7 +80,6 @@ extension UIViewController {
         profileImageView.layer.cornerRadius = 20
         profileImageView.clipsToBounds = true
         profileImageView.translatesAutoresizingMaskIntoConstraints = false
-        profileImageView.tag = 222
         if let profileImageUrl = account.profileImageUrl {
             profileImageView.loadImagesFromCache(urlString: profileImageUrl)
         } else {
@@ -100,13 +95,17 @@ extension UIViewController {
         foundIndicator.centerYAnchor.constraint(equalTo: profileImageView.centerYAnchor).isActive = true
         foundIndicator.widthAnchor.constraint(equalToConstant: 44).isActive = true
         foundIndicator.heightAnchor.constraint(equalToConstant: 44).isActive = true
-        
+        foundIndicator.isHidden = true
+        beenCaughtIndicator.centerXAnchor.constraint(equalTo: profileImageView.centerXAnchor).isActive = true
+        beenCaughtIndicator.centerYAnchor.constraint(equalTo: profileImageView.centerYAnchor).isActive = true
+        beenCaughtIndicator.widthAnchor.constraint(equalToConstant: 44).isActive = true
+        beenCaughtIndicator.heightAnchor.constraint(equalToConstant: 44).isActive = true
+        beenCaughtIndicator.isHidden = true
         
         let nameLabel = UILabel()
         containerView.addSubview(nameLabel)
         
         nameLabel.text = account.name
-        nameLabel.tag = 333
         nameLabel.translatesAutoresizingMaskIntoConstraints = false
         nameLabel.leftAnchor.constraint(equalTo: profileImageView.rightAnchor, constant: 8).isActive = true
         nameLabel.centerYAnchor.constraint(equalTo: profileImageView.centerYAnchor).isActive = true

@@ -15,6 +15,8 @@ class AccountViewController: UITableViewController {
     var accounts = [Account]()
     var pretendingUser: Account?
     
+    var chatLogController: UIViewController?
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -92,8 +94,15 @@ class AccountViewController: UITableViewController {
                 guard let uid = Auth.auth().currentUser?.uid else {return}
                 
                 if self.pretendingUser!.beenCaught {
-                    let refBeenCaught = Database.database().reference().child("users-caught").child(account.id!).child(uid)
+                    self.chatLogController?.navigationController?.popViewController(animated: true)
+                    let alert = UIAlertController(title: "Well Done!", message: "You both have caught each other", preferredStyle: .alert)
+                    alert.addAction(UIAlertAction(title: "Ok", style: .default, handler: {(_) in }))
+                    self.present(alert, animated: true, completion: nil)
+                    
+                    let refBeenCaught = Database.database().reference().child("users-been-caught").child(uid).child(self.pretendingUser!.id!)
                     refBeenCaught.removeValue()
+                    let refCaught = Database.database().reference().child("users-caught").child(self.pretendingUser!.representedUserId!).child(self.pretendingUser!.impersonatingUserId!)
+                    refCaught.removeValue()
                     let refLastMessage = Database.database().reference().child("last-user-message").child(uid).child(self.pretendingUser!.id!)
                     refLastMessage.removeValue()
                     let refLastMessage2 = Database.database().reference().child("last-user-message").child(account.id!).child(self.pretendingUser!.impersonatingUserId!)
@@ -103,12 +112,24 @@ class AccountViewController: UITableViewController {
                     let refConnection2 = Database.database().reference().child("connections").child(account.id!)
                     refConnection2.updateChildValues([self.pretendingUser!.impersonatingUserId! : "none"])
                     let refUserMessage = Database.database().reference().child("user-messages").child(uid).child(account.id!)
-                    refUserMessage.removeValue()
+                    refUserMessage.observeSingleEvent(of: .value, with: {(snapshot) in
+                        if let dictionary = snapshot.value as? [String: String] {
+                            for map in dictionary {
+                                let messageId = map.key
+                                let refMessage = Database.database().reference().child("messages").child(messageId)
+                                refMessage.removeValue()
+                            }
+                        }
+                        snapshot.ref.removeValue()
+                    })
+                    
                     let refUserMessage2 = Database.database().reference().child("user-messages").child(account.id!).child(uid)
                     refUserMessage2.removeValue()
                 } else {
                     let refCaught = Database.database().reference().child("users-caught").child(uid)
                     refCaught.updateChildValues([self.pretendingUser!.id! : 1])
+                    let refBeenCaught = Database.database().reference().child("users-been-caught").child(self.pretendingUser!.representedUserId!)
+                    refBeenCaught.updateChildValues([self.pretendingUser!.impersonatingUserId! : 1])
                 }
                 
             }

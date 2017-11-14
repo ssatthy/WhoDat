@@ -15,16 +15,12 @@ class MessageController: UITableViewController {
     
     var chatLogControllers = [String: ChatLogController]()
     
-    let cellId = "cellId"
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         
         navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Logout", style: .plain, target: self, action: #selector(handleLogout))
         
         checkIfUserIsLoggedIn()
-        tableView.register(AccountCell.self, forCellReuseIdentifier: cellId)
-        
         let image = UIImage(named: "new_message_icon")
         navigationItem.rightBarButtonItem = UIBarButtonItem(image: image, style: .plain, target: self, action: #selector(handleNewMessage))
     }
@@ -41,7 +37,10 @@ class MessageController: UITableViewController {
         ref.observe(.childAdded, with: {(snapshot) in
             self.group.enter()
             let pretendingUserId = snapshot.key
-            let messageId = snapshot.value as! String
+            let valueDic = snapshot.value as! [String: String]
+            let messageMap = Array(valueDic)[0]
+            let messageId = messageMap.key
+            let impersonatingUserId = messageMap.value
             let messageRef = Database.database().reference().child("messages").child(messageId)
             messageRef.observeSingleEvent(of: .value, with: {(snapshot) in
                 if let dictionary = snapshot.value as? [String: Any] {
@@ -50,6 +49,7 @@ class MessageController: UITableViewController {
                     message.setValuesForKeys(dictionary)
                     
                     if let account = LocalUserRepository.shared().loadUserFromCache(uid: pretendingUserId) {
+                        account.impersonatingUserId = impersonatingUserId
                         message.account = account
                         self.setupMessage(message: message)
                         self.group.leave()
@@ -59,6 +59,7 @@ class MessageController: UITableViewController {
                                 let account = Account()
                                 account.id = snapshot.key
                                 account.setValuesForKeys(dictionary)
+                                account.impersonatingUserId = impersonatingUserId
                                 LocalUserRepository.shared().setObject(account)
                                 
                                 message.account = account
@@ -80,7 +81,10 @@ class MessageController: UITableViewController {
         let ref = Database.database().reference().child("last-user-message").child(uid)
         ref.observe(.childChanged, with: {(snapshot) in
             let pretendingUserId = snapshot.key
-            let messageId = snapshot.value as! String
+            let valueDic = snapshot.value as! [String: String]
+            let messageMap = Array(valueDic)[0]
+            let messageId = messageMap.key
+            let impersonatingUserId = messageMap.value
             let messageRef = Database.database().reference().child("messages").child(messageId)
             messageRef.observeSingleEvent(of: .value, with: {(snapshot) in
                 if let dictionary = snapshot.value as? [String: Any] {
@@ -89,6 +93,7 @@ class MessageController: UITableViewController {
                     message.setValuesForKeys(dictionary)
                     
                     if let account = LocalUserRepository.shared().loadUserFromCache(uid: pretendingUserId) {
+                        account.impersonatingUserId = impersonatingUserId
                         message.account = account
                         self.setupMessage(message: message)
                     } else {
@@ -97,6 +102,7 @@ class MessageController: UITableViewController {
                                 let account = Account()
                                 account.id = snapshot.key
                                 account.setValuesForKeys(dictionary)
+                                account.impersonatingUserId = impersonatingUserId
                                 LocalUserRepository.shared().setObject(account)
                                 
                                 message.account = account
@@ -115,11 +121,12 @@ class MessageController: UITableViewController {
         }
         let ref = Database.database().reference().child("last-user-message").child(uid)
         ref.observe(.childRemoved, with: {(snapshot) in
-            print("removed")
-            print(snapshot)
-            let messageId = snapshot.value as! String
+            let accountId = snapshot.key
+            let valueDic = snapshot.value as! [String: String]
+            let messageMap = Array(valueDic)[0]
+            let messageId = messageMap.key
             self.messages = self.messages.filter{ $0.id != messageId }
-            
+            self.chatLogControllers[accountId] = nil
             DispatchQueue.main.async {
                 self.tableView.reloadData()
             }
@@ -127,8 +134,8 @@ class MessageController: UITableViewController {
     }
     
     func setupMessage(message: Message) {
+        
         message.account?.representedUserId = message.representedUserId()!
-        self.setImpersonatingUserId(representedUserId: message.representedUserId()!, account: message.account!)
         messages = messages.filter{ $0.account?.id != message.account?.id! }
         self.messages.append(message)
         
@@ -151,10 +158,18 @@ class MessageController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: cellId, for: indexPath) as! AccountCell
         let message = messages[indexPath.row]
-        cell.message = message
-        return cell
+        if let cell = tableView.dequeueReusableCell(withIdentifier: message.account!.id!) {
+            let cell1 = cell as! AccountCell
+            cell1.message = message
+            return cell
+        } else {
+            tableView.register(AccountCell.self, forCellReuseIdentifier: message.account!.id!)
+            let cell = tableView.dequeueReusableCell(withIdentifier: message.account!.id!, for: indexPath) as! AccountCell
+            cell.message = message
+            return cell
+        }
+        
     }
     
     override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
@@ -209,8 +224,10 @@ class MessageController: UITableViewController {
     }
     
     func resetMessages() {
+        
         messages.removeAll()
         tableView.reloadData()
+        chatLogControllers = [String: ChatLogController]()
         
         observeAddedMessages()
         observeChangedMessages()

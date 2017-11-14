@@ -21,9 +21,9 @@ class AccountCell: UITableViewCell {
                 dateFormatter.dateFormat = "hh:mm a"
                 self.timeLabel.text = dateFormatter.string(from: timestampDate as Date)
             }
-            foundIndicator.isHidden = true
-            beenCaughtIndicator.isHidden = true
-            setAttention(account: message!.account!)
+            if oldValue == nil {
+                setupAttention(account: message!.account!)
+            }
         }
     }
     
@@ -115,18 +115,30 @@ class AccountCell: UITableViewCell {
         
     }
     
-    private func setAttention(account: Account) {
+    private func setupAttention(account: Account) {
         guard let uid = Auth.auth().currentUser?.uid else {return}
-        
         let refCaught = Database.database().reference().child("users-caught").child(uid).queryOrderedByKey()
             .queryEqual(toValue: account.id!)
-        refCaught.observe(.childAdded, with: {(snapshot) in
-            self.foundIndicator.isHidden = false
+        refCaught.observe(.value, with: {(snapshot) in
+            print("found")
+            print(snapshot)
+            if let _ = snapshot.value as? [String: Int] {
+                self.foundIndicator.isHidden = false
+            } else {
+                self.foundIndicator.isHidden = true
+            }
         })
         
-        let refBeenCaught = Database.database().reference().child("users-caught").child(account.representedUserId!).queryOrderedByKey().queryEqual(toValue: uid)
-        refBeenCaught.observe(.childAdded, with: {(snapshot) in
-            self.beenCaughtIndicator.isHidden = false
+        let refBeenCaught = Database.database().reference().child("users-been-caught").child(uid).queryOrderedByKey().queryEqual(toValue: account.id!)
+        refBeenCaught.observe(.value, with: {(snapshot) in
+            print("caught")
+            print(snapshot)
+            if let _ = snapshot.value as? [String: Int] {
+                self.beenCaughtIndicator.isHidden = false
+            } else {
+                self.beenCaughtIndicator.isHidden = true
+            }
+            
         })
     }
     

@@ -64,29 +64,41 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         self.seeButton = UIBarButtonItem(title: "See", style: .plain, target: self, action: #selector(handleSee))
         self.seeButton?.tintColor = UIColor.green
         
-        setAttention()
+        setupAttention()
     }
     
-    private func setAttention() {
+    private func setupAttention() {
         guard let uid = Auth.auth().currentUser?.uid else {return}
         
         let foundIndicator = navigationItem.titleView?.viewWithTag(111)
-        foundIndicator?.backgroundColor = navigationItem.titleView?.backgroundColor
+        let beenCaughtIndicator = navigationItem.titleView?.viewWithTag(222)
+        
+        let refCaught = Database.database().reference().child("users-caught").child(uid).queryOrderedByKey()
+            .queryEqual(toValue: account!.id!)
+        refCaught.observe(.value, with: {(snapshot) in
+            if let _ = snapshot.value as? [String: Int] {
+                foundIndicator?.isHidden = false
+                self.navigationItem.rightBarButtonItem = self.seeButton
+            } else {
+                self.navigationItem.rightBarButtonItem = self.guessButton
+                foundIndicator?.isHidden = true
+            }
+        })
         
         self.account?.beenCaught = false
         
-        let refCaught = Database.database().reference().child("users-caught").child(uid).queryOrderedByKey()
-            .queryEqual(toValue: account?.id!)
-        refCaught.observe(.childAdded, with: {(snapshot) in
-            foundIndicator?.backgroundColor = UIColor(r: 61, g: 151, b: 61)
-            self.navigationItem.rightBarButtonItem = self.seeButton
+        let refBeenCaught = Database.database().reference().child("users-been-caught").child(uid).queryOrderedByKey().queryEqual(toValue: account!.id!)
+        refBeenCaught.observe(.value, with: {(snapshot) in
+            if let _ = snapshot.value as? [String: Int] {
+                beenCaughtIndicator?.isHidden = false
+                self.account?.beenCaught = true
+            } else {
+                self.account?.beenCaught = false
+                beenCaughtIndicator?.isHidden = true
+            }
+            
         })
         
-        let refBeenCaught = Database.database().reference().child("users-caught").child(account!.representedUserId!).queryOrderedByKey().queryEqual(toValue: uid)
-        refBeenCaught.observe(.childAdded, with: {(snapshot) in
-            foundIndicator?.backgroundColor = UIColor(r: 151, g: 61, b: 61)
-            self.account?.beenCaught = true
-        })
     }
     
     @objc func handleSee() {
@@ -97,6 +109,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         
         let accountViewController = AccountViewController()
         accountViewController.pretendingUser = account
+        accountViewController.chatLogController = self
         let navController = UINavigationController(rootViewController: accountViewController)
         present(navController, animated: true, completion: nil)
     }
@@ -272,7 +285,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     @objc func handleSend() {
         let ref = Database.database().reference().child("messages").childByAutoId()
         
-        if let toId = account!.representedUserId, !inputTextField.text!.isEmpty {
+        if let toId = account!.representedUserId, let impersonatingUserId = self.account!.impersonatingUserId, !inputTextField.text!.isEmpty {
             let fromId = Auth.auth().currentUser!.uid
             let timestamp = NSDate().timeIntervalSince1970
             let values = ["message": inputTextField.text!, "toId": toId,
@@ -290,14 +303,14 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
                 userMessageRef.updateChildValues([messageId : self.account!.id!])
                 
                 let lastUserMessageRef = Database.database().reference().child("last-user-message").child(fromId)
-                lastUserMessageRef.updateChildValues([self.account!.id! : messageId])
+                lastUserMessageRef.updateChildValues([self.account!.id! : [messageId: impersonatingUserId]])
                 
                 
                 let recipientMessageRef = Database.database().reference().child("user-messages").child(toId).child(fromId)
-                recipientMessageRef.updateChildValues([messageId : self.account!.impersonatingUserId!])
+                recipientMessageRef.updateChildValues([messageId : impersonatingUserId])
                 
                 let lastRecipientMessageRef = Database.database().reference().child("last-user-message").child(toId)
-                lastRecipientMessageRef.updateChildValues([self.account!.impersonatingUserId! : messageId ])
+                lastRecipientMessageRef.updateChildValues([impersonatingUserId : [messageId: self.account!.id!]])
                 
             }
         }
@@ -330,13 +343,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
                     represent = unRepresentedUsers[Int(arc4random_uniform(UInt32(unRepresentedUsers.count)))]
                 }
                 account?.representedUserId = represent.id
-                guard let uid = Auth.auth().currentUser?.uid else {
-                    return
-                }
                 
-                
-                let connectionRef = Database.database().reference().child("connections").child(uid)
-                connectionRef.updateChildValues([account!.id! : represent.id!])
                 findAImpersonation()
             }
         }
@@ -375,8 +382,12 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
             guard let uid = Auth.auth().currentUser?.uid else {return}
             
             account?.impersonatingUserId = impersonatingUserId
-            let connectionRef = Database.database().reference().child("connections").child(account!.representedUserId!)
-            connectionRef.updateChildValues([impersonatingUserId : uid])
+            let connectionRef = Database.database().reference().child("connections").child(uid)
+            connectionRef.updateChildValues([account!.id! : [account!.representedUserId!: impersonatingUserId]])
+            
+            let connectionRef1 = Database.database().reference().child("connections").child(account!.representedUserId!)
+            connectionRef1.updateChildValues([impersonatingUserId : [uid: account!.id]])
+            print("representing/impersonating setup")
         }
     }
     
