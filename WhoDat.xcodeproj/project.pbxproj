@@ -21,6 +21,7 @@
 		5C48E0081F932B5300CD2702 /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C48E0071F932B5300CD2702 /* Message.swift */; };
 		5C48E00B1F93362500CD2702 /* AccountCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C48E00A1F93362500CD2702 /* AccountCell.swift */; };
 		5C48E00D1F94772800CD2702 /* MessageCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C48E00C1F94772800CD2702 /* MessageCell.swift */; };
+		5C62E33A1FB812CB008F7496 /* LocalUserRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C62E3391FB812CB008F7496 /* LocalUserRepository.swift */; };
 		5CBB52001FA04BA800371ACA /* AccountViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CBB51FF1FA04BA800371ACA /* AccountViewController.swift */; };
 		5CCF4BEB1FA061CA00782528 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5CCF4BEA1FA061CA00782528 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
@@ -41,6 +42,7 @@
 		5C48E0071F932B5300CD2702 /* Message.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
 		5C48E00A1F93362500CD2702 /* AccountCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountCell.swift; sourceTree = "<group>"; };
 		5C48E00C1F94772800CD2702 /* MessageCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageCell.swift; sourceTree = "<group>"; };
+		5C62E3391FB812CB008F7496 /* LocalUserRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalUserRepository.swift; sourceTree = "<group>"; };
 		5CBB51FF1FA04BA800371ACA /* AccountViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountViewController.swift; sourceTree = "<group>"; };
 		5CCF4BEA1FA061CA00782528 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		684AF82A0117A3EA6984AADA /* Pods_WhoDat.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_WhoDat.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -120,6 +122,7 @@
 			isa = PBXGroup;
 			children = (
 				5C48E0031F92F32300CD2702 /* Extensions.swift */,
+				5C62E3391FB812CB008F7496 /* LocalUserRepository.swift */,
 			);
 			name = Helper;
 			sourceTree = "<group>";
@@ -289,6 +292,7 @@
 			files = (
 				5C48E00D1F94772800CD2702 /* MessageCell.swift in Sources */,
 				5C48E0061F93107600CD2702 /* ChatLogController.swift in Sources */,
+				5C62E33A1FB812CB008F7496 /* LocalUserRepository.swift in Sources */,
 				5C48E00B1F93362500CD2702 /* AccountCell.swift in Sources */,
 				5CBB52001FA04BA800371ACA /* AccountViewController.swift in Sources */,
 				5C48E0011F92599E00CD2702 /* LoginHandler.swift in Sources */,

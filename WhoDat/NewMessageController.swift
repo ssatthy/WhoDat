@@ -43,7 +43,7 @@ class NewMessageController: UITableViewController {
                         let account = Account()
                         account.id = snapshot.key
                         account.setValuesForKeys(dictionary)
-                        userCache.setObject(account, forKey: account.id as AnyObject)
+                        LocalUserRepository.shared().setObject(account)
                         
                         if let representedUserId = representedValue as? String, representedUserId != "none" {
                             account.representedUserId = representedUserId

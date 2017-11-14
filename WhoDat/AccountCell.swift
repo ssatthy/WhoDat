@@ -13,7 +13,7 @@ class AccountCell: UITableViewCell {
     
     var message: Message? {
         didSet {
-            setNameAndProfilePicture()
+            setNameAndProfilePicture(account: message!.account!)
             self.detailTextLabel?.text = self.message?.message
             if let seconds = self.message?.timestamp?.doubleValue {
                 let timestampDate = NSDate(timeIntervalSince1970: seconds)
@@ -21,22 +21,19 @@ class AccountCell: UITableViewCell {
                 dateFormatter.dateFormat = "hh:mm a"
                 self.timeLabel.text = dateFormatter.string(from: timestampDate as Date)
             }
-            
+            foundIndicator.isHidden = true
+            beenCaughtIndicator.isHidden = true
+            setAttention(account: message!.account!)
         }
     }
     
-    private func setNameAndProfilePicture() {
-        let account = message?.account
-        
-        self.textLabel?.text = account?.name
-        if account?.profileImageUrl != nil {
-            self.profileImageView.loadImagesFromCache(urlString: account!.profileImageUrl!)
+    private func setNameAndProfilePicture(account: Account) {
+        self.textLabel?.text = account.name
+        if account.profileImageUrl != nil {
+            self.profileImageView.loadImagesFromCache(urlString: account.profileImageUrl!)
         } else {
             self.profileImageView.image = UIImage(named: "profilepic")
         }
-        
-        foundIndicator.backgroundColor = UIColor.white
-        setAttention(account: account!)
     }
     
     override func layoutSubviews() {
@@ -56,7 +53,6 @@ class AccountCell: UITableViewCell {
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.layer.cornerRadius = 24
         imageView.layer.masksToBounds = true
-        
         return imageView
     }()
     
@@ -65,9 +61,20 @@ class AccountCell: UITableViewCell {
         indicator.translatesAutoresizingMaskIntoConstraints = false
         indicator.layer.cornerRadius = 26
         indicator.layer.masksToBounds = true
+        indicator.backgroundColor = UIColor(r: 61, g: 151, b: 61)
+        indicator.isHidden = true
         return indicator
     }()
     
+    let beenCaughtIndicator: UIView = {
+        let indicator = UIView()
+        indicator.translatesAutoresizingMaskIntoConstraints = false
+        indicator.layer.cornerRadius = 26
+        indicator.layer.masksToBounds = true
+        indicator.backgroundColor = UIColor(r: 151, g: 61, b: 61)
+        indicator.isHidden = true
+        return indicator
+    }()
     
     let timeLabel: UILabel = {
         let label = UILabel()
@@ -80,6 +87,7 @@ class AccountCell: UITableViewCell {
         super.init(style: .subtitle, reuseIdentifier: reuseIdentifier)
         
         addSubview(foundIndicator)
+        addSubview(beenCaughtIndicator)
         addSubview(profileImageView)
         
         profileImageView.leftAnchor.constraint(equalTo: self.leftAnchor, constant: 8).isActive = true
@@ -91,6 +99,11 @@ class AccountCell: UITableViewCell {
         foundIndicator.centerYAnchor.constraint(equalTo: self.centerYAnchor).isActive = true
         foundIndicator.widthAnchor.constraint(equalToConstant: 52).isActive = true
         foundIndicator.heightAnchor.constraint(equalToConstant: 52).isActive = true
+        
+        beenCaughtIndicator.centerXAnchor.constraint(equalTo: profileImageView.centerXAnchor).isActive = true
+        beenCaughtIndicator.centerYAnchor.constraint(equalTo: self.centerYAnchor).isActive = true
+        beenCaughtIndicator.widthAnchor.constraint(equalToConstant: 52).isActive = true
+        beenCaughtIndicator.heightAnchor.constraint(equalToConstant: 52).isActive = true
         
         addSubview(timeLabel)
         
@@ -108,12 +121,12 @@ class AccountCell: UITableViewCell {
         let refCaught = Database.database().reference().child("users-caught").child(uid).queryOrderedByKey()
             .queryEqual(toValue: account.id!)
         refCaught.observe(.childAdded, with: {(snapshot) in
-            self.foundIndicator.backgroundColor = UIColor(r: 61, g: 151, b: 61)
+            self.foundIndicator.isHidden = false
         })
         
         let refBeenCaught = Database.database().reference().child("users-caught").child(account.representedUserId!).queryOrderedByKey().queryEqual(toValue: uid)
         refBeenCaught.observe(.childAdded, with: {(snapshot) in
-            self.foundIndicator.backgroundColor = UIColor(r: 151, g: 61, b: 61)
+            self.beenCaughtIndicator.isHidden = false
         })
     }
     

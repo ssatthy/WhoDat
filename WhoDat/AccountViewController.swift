@@ -31,7 +31,7 @@ class AccountViewController: UITableViewController {
         Database.database().reference().child("connections").child(uid).observe(.childAdded, with:
             {(snapshot) in
                 let userId = snapshot.key
-                if let account = self.loadUserFromCache(uid: userId) {
+                if let account = LocalUserRepository.shared().loadUserFromCache(uid: userId) {
                     self.accounts.append(account)
                     DispatchQueue.main.async {
                         self.tableView.reloadData()
@@ -43,7 +43,7 @@ class AccountViewController: UITableViewController {
                             let account = Account()
                             account.id = snapshot.key
                             account.setValuesForKeys(dictionary)
-                            userCache.setObject(account, forKey: account.id as AnyObject)
+                            LocalUserRepository.shared().setObject(account)
                             
                             self.accounts.append(account)
                             DispatchQueue.main.async {
@@ -90,8 +90,26 @@ class AccountViewController: UITableViewController {
             let account = self.accounts[indexPath.row]
             if self.pretendingUser!.representedUserId == account.id {
                 guard let uid = Auth.auth().currentUser?.uid else {return}
-                let refCaught = Database.database().reference().child("users-caught").child(uid)
-                refCaught.updateChildValues([self.pretendingUser!.id! : 1])
+                
+                if self.pretendingUser!.beenCaught {
+                    let refBeenCaught = Database.database().reference().child("users-caught").child(account.id!).child(uid)
+                    refBeenCaught.removeValue()
+                    let refLastMessage = Database.database().reference().child("last-user-message").child(uid).child(self.pretendingUser!.id!)
+                    refLastMessage.removeValue()
+                    let refLastMessage2 = Database.database().reference().child("last-user-message").child(account.id!).child(self.pretendingUser!.impersonatingUserId!)
+                    refLastMessage2.removeValue()
+                    let refConnection = Database.database().reference().child("connections").child(uid)
+                    refConnection.updateChildValues([self.pretendingUser!.id! : "none"])
+                    let refConnection2 = Database.database().reference().child("connections").child(account.id!)
+                    refConnection2.updateChildValues([self.pretendingUser!.impersonatingUserId! : "none"])
+                    let refUserMessage = Database.database().reference().child("user-messages").child(uid).child(account.id!)
+                    refUserMessage.removeValue()
+                    let refUserMessage2 = Database.database().reference().child("user-messages").child(account.id!).child(uid)
+                    refUserMessage2.removeValue()
+                } else {
+                    let refCaught = Database.database().reference().child("users-caught").child(uid)
+                    refCaught.updateChildValues([self.pretendingUser!.id! : 1])
+                }
                 
             }
             self.handleCancel()

@@ -42,16 +42,7 @@ extension UIImageView {
 }
 
 
-var userCache = NSCache<AnyObject, AnyObject>()
-
 extension UIViewController {
-    
-    func loadUserFromCache(uid: String) -> Account? {
-        if let account = userCache.object(forKey: uid as AnyObject) {
-            return account as? Account
-        }
-        return nil
-    }
     
     func setImpersonatingUserId(representedUserId: String, account: Account) {
         
@@ -93,6 +84,7 @@ extension UIViewController {
         profileImageView.layer.cornerRadius = 20
         profileImageView.clipsToBounds = true
         profileImageView.translatesAutoresizingMaskIntoConstraints = false
+        profileImageView.tag = 222
         if let profileImageUrl = account.profileImageUrl {
             profileImageView.loadImagesFromCache(urlString: profileImageUrl)
         } else {
@@ -114,6 +106,7 @@ extension UIViewController {
         containerView.addSubview(nameLabel)
         
         nameLabel.text = account.name
+        nameLabel.tag = 333
         nameLabel.translatesAutoresizingMaskIntoConstraints = false
         nameLabel.leftAnchor.constraint(equalTo: profileImageView.rightAnchor, constant: 8).isActive = true
         nameLabel.centerYAnchor.constraint(equalTo: profileImageView.centerYAnchor).isActive = true

@@ -10,8 +10,10 @@ import UIKit
 import Firebase
 
 class MessageController: UITableViewController {
-
+    
     var messages = [Message]()
+    
+    var chatLogControllers = [String: ChatLogController]()
     
     let cellId = "cellId"
     
@@ -21,12 +23,14 @@ class MessageController: UITableViewController {
         navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Logout", style: .plain, target: self, action: #selector(handleLogout))
         
         checkIfUserIsLoggedIn()
-        resetMessages()
         tableView.register(AccountCell.self, forCellReuseIdentifier: cellId)
         
         let image = UIImage(named: "new_message_icon")
         navigationItem.rightBarButtonItem = UIBarButtonItem(image: image, style: .plain, target: self, action: #selector(handleNewMessage))
     }
+    
+    let operations = OperationQueue()
+    let group = DispatchGroup()
     
     func observeAddedMessages() {
         
@@ -35,34 +39,37 @@ class MessageController: UITableViewController {
         }
         let ref = Database.database().reference().child("last-user-message").child(uid)
         ref.observe(.childAdded, with: {(snapshot) in
+            self.group.enter()
             let pretendingUserId = snapshot.key
             let messageId = snapshot.value as! String
             let messageRef = Database.database().reference().child("messages").child(messageId)
             messageRef.observeSingleEvent(of: .value, with: {(snapshot) in
                 if let dictionary = snapshot.value as? [String: Any] {
                     let message = Message()
+                    message.id = messageId
                     message.setValuesForKeys(dictionary)
                     
-                    if let account = self.loadUserFromCache(uid: pretendingUserId) {
+                    if let account = LocalUserRepository.shared().loadUserFromCache(uid: pretendingUserId) {
                         message.account = account
                         self.setupMessage(message: message)
+                        self.group.leave()
                     } else {
                         Database.database().reference().child("users").child(pretendingUserId).observeSingleEvent(of: .value, with: {(snapshot) in
                             if let dictionary = snapshot.value as? [String: AnyObject] {
                                 let account = Account()
                                 account.id = snapshot.key
                                 account.setValuesForKeys(dictionary)
-                                userCache.setObject(account, forKey: account.id as AnyObject)
+                                LocalUserRepository.shared().setObject(account)
                                 
                                 message.account = account
                                 self.setupMessage(message: message)
+                                self.group.leave()
                             }
                         })
                     }
                 }
             })
         })
-        
     }
     
     func observeChangedMessages() {
@@ -78,9 +85,10 @@ class MessageController: UITableViewController {
             messageRef.observeSingleEvent(of: .value, with: {(snapshot) in
                 if let dictionary = snapshot.value as? [String: Any] {
                     let message = Message()
+                    message.id = messageId
                     message.setValuesForKeys(dictionary)
                     
-                    if let account = self.loadUserFromCache(uid: pretendingUserId) {
+                    if let account = LocalUserRepository.shared().loadUserFromCache(uid: pretendingUserId) {
                         message.account = account
                         self.setupMessage(message: message)
                     } else {
@@ -89,7 +97,7 @@ class MessageController: UITableViewController {
                                 let account = Account()
                                 account.id = snapshot.key
                                 account.setValuesForKeys(dictionary)
-                                userCache.setObject(account, forKey: account.id as AnyObject)
+                                LocalUserRepository.shared().setObject(account)
                                 
                                 message.account = account
                                 self.setupMessage(message: message)
@@ -99,7 +107,23 @@ class MessageController: UITableViewController {
                 }
             })
         })
-        
+    }
+
+    func observeRemovedMessage() {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            return
+        }
+        let ref = Database.database().reference().child("last-user-message").child(uid)
+        ref.observe(.childRemoved, with: {(snapshot) in
+            print("removed")
+            print(snapshot)
+            let messageId = snapshot.value as! String
+            self.messages = self.messages.filter{ $0.id != messageId }
+            
+            DispatchQueue.main.async {
+                self.tableView.reloadData()
+            }
+        })
     }
     
     func setupMessage(message: Message) {
@@ -108,14 +132,20 @@ class MessageController: UITableViewController {
         messages = messages.filter{ $0.account?.id != message.account?.id! }
         self.messages.append(message)
         
-        self.messages.sort(by: {(message1, message2) -> Bool in
-            return (message1.timestamp?.intValue)! > (message2.timestamp?.intValue)!
+        group.notify(queue: .main, execute: {
+            if self.operations.operationCount == 0 {
+                self.operations.addOperation {
+                    self.messages.sort(by: {(message1, message2) -> Bool in
+                        return (message1.timestamp?.intValue)! > (message2.timestamp?.intValue)!
+                    })
+                    DispatchQueue.main.async {
+                        self.tableView.reloadData()
+                    }
+                }
+            }
         })
-        DispatchQueue.main.async {
-            self.tableView.reloadData()
-        }
     }
-
+    
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return messages.count
     }
@@ -160,7 +190,7 @@ class MessageController: UITableViewController {
             return
         }
         
-        if let account = loadUserFromCache(uid: uid) {
+        if let account = LocalUserRepository.shared().loadUserFromCache(uid: uid) {
             self.setNavBar(account: account)
         } else {
             Database.database().reference().child("users").child(uid).observeSingleEvent(of: .value, with:
@@ -170,12 +200,12 @@ class MessageController: UITableViewController {
                         let account = Account()
                         account.setValuesForKeys(dictionary)
                         account.id = uid
-                        userCache.setObject(account, forKey: account.id as AnyObject)
+                        LocalUserRepository.shared().setObject(account)
                         self.setNavBar(account: account)
                     }
             })
         }
-        
+        resetMessages()
     }
     
     func resetMessages() {
@@ -184,19 +214,31 @@ class MessageController: UITableViewController {
         
         observeAddedMessages()
         observeChangedMessages()
+        observeRemovedMessage()
     }
     
     func showChatLogController(selectedAccount: Account) {
-        let chatLogController = ChatLogController(collectionViewLayout: UICollectionViewFlowLayout())
-        chatLogController.account = selectedAccount
-        navigationController?.pushViewController(chatLogController, animated: true)
+        if let chatLogController = chatLogControllers[selectedAccount.id!] {
+            navigationController?.pushViewController(chatLogController, animated: true)
+        } else {
+            let chatLogController = ChatLogController(collectionViewLayout: UICollectionViewFlowLayout())
+            chatLogController.account = selectedAccount
+            chatLogControllers[selectedAccount.id!] = chatLogController
+            navigationController?.pushViewController(chatLogController, animated: true)
+        }
+        
     }
     
     func showChatLogController(selectedAccount: Account, accounts: [Account]) {
-        let chatLogController = ChatLogController(collectionViewLayout: UICollectionViewFlowLayout())
-        chatLogController.accounts = accounts
-        chatLogController.account = selectedAccount
-        navigationController?.pushViewController(chatLogController, animated: true)
+        if let chatLogController = chatLogControllers[selectedAccount.id!] {
+            navigationController?.pushViewController(chatLogController, animated: true)
+        } else {
+            let chatLogController = ChatLogController(collectionViewLayout: UICollectionViewFlowLayout())
+            chatLogController.accounts = accounts
+            chatLogController.account = selectedAccount
+            chatLogControllers[selectedAccount.id!] = chatLogController
+            navigationController?.pushViewController(chatLogController, animated: true)
+        }
     }
     
     @objc func handleLogout() {

@@ -149,7 +149,7 @@ class LoginController: UIViewController {
                 print(error ?? "Signin failed")
                 return
             }
-            userCache = NSCache<AnyObject, AnyObject>()
+            LocalUserRepository.shared().reset()
             self.messageController?.fetchUserAndSetNavBar()
             self.dismiss(animated: true, completion: nil)
         })

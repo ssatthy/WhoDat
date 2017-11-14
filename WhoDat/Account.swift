@@ -19,4 +19,5 @@ import UIKit
     
     var impersonatingUserId: String?
     
+    var beenCaught = false
 }

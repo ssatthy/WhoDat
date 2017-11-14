@@ -53,10 +53,16 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         observeUserMessages()
     }
     
+    var guessButton: UIBarButtonItem?
+    var seeButton: UIBarButtonItem?
+    
     func setGuessButton() {
-        let guessButton = UIBarButtonItem(title: "Who?", style: .plain, target: self, action: #selector(handleGuess))
-        guessButton.tintColor = UIColor.red
+        self.guessButton = UIBarButtonItem(title: "Who?", style: .plain, target: self, action: #selector(handleGuess))
+        self.guessButton?.tintColor = UIColor.red
         navigationItem.rightBarButtonItem = guessButton
+        
+        self.seeButton = UIBarButtonItem(title: "See", style: .plain, target: self, action: #selector(handleSee))
+        self.seeButton?.tintColor = UIColor.green
         
         setAttention()
     }
@@ -67,18 +73,25 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         let foundIndicator = navigationItem.titleView?.viewWithTag(111)
         foundIndicator?.backgroundColor = navigationItem.titleView?.backgroundColor
         
+        self.account?.beenCaught = false
+        
         let refCaught = Database.database().reference().child("users-caught").child(uid).queryOrderedByKey()
             .queryEqual(toValue: account?.id!)
         refCaught.observe(.childAdded, with: {(snapshot) in
             foundIndicator?.backgroundColor = UIColor(r: 61, g: 151, b: 61)
+            self.navigationItem.rightBarButtonItem = self.seeButton
         })
         
         let refBeenCaught = Database.database().reference().child("users-caught").child(account!.representedUserId!).queryOrderedByKey().queryEqual(toValue: uid)
         refBeenCaught.observe(.childAdded, with: {(snapshot) in
             foundIndicator?.backgroundColor = UIColor(r: 151, g: 61, b: 61)
+            self.account?.beenCaught = true
         })
     }
-
+    
+    @objc func handleSee() {
+        print("See hanlded! :P")
+    }
     
     @objc func handleGuess() {
         
@@ -143,7 +156,9 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     @objc func scrollToLastItem() {
         let lastSectionIndex = collectionView!.numberOfSections - 1
         let lastItemIndex = collectionView!.numberOfItems(inSection: lastSectionIndex) - 1
-
+        if lastItemIndex < 0 {
+            return
+        }
         self.collectionView?.scrollToItem(at: IndexPath(item: lastItemIndex, section: lastSectionIndex), at: .bottom, animated: true)
     }
     
@@ -329,6 +344,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     
     
     var unRepresentingUserIds = [String]()
+    let group = DispatchGroup()
     
     func findAImpersonation() {
         print("Finding a impersonating...")
@@ -336,10 +352,15 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         let ref = Database.database().reference().child("connections").child(account!.representedUserId!)
             .queryOrderedByValue().queryEqual(toValue: "none")
         ref.observe(.childAdded, with: {(snapshot) in
+            self.group.enter()
             self.unRepresentingUserIds.append(snapshot.key)
+            if self.unRepresentingUserIds.count == 1 {
+                self.group.notify(queue: .main, execute: {
+                    self.updateImpersonation()
+                })
+            }
+            self.group.leave()
         })
-        
-        waitForDataToBeFetched()
     }
     
     
@@ -358,15 +379,6 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
             connectionRef.updateChildValues([impersonatingUserId : uid])
         }
     }
-    
-    var timer: Timer?
-    
-    private func waitForDataToBeFetched() {
-        self.timer?.invalidate()
-        
-        self.timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(self.updateImpersonation), userInfo: nil, repeats: false)
-    }
-    
     
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         handleSend()
