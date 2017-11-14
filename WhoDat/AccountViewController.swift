@@ -15,8 +15,6 @@ class AccountViewController: UITableViewController {
     var accounts = [Account]()
     var pretendingUser: Account?
     
-    var chatLogController: UIViewController?
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -94,11 +92,6 @@ class AccountViewController: UITableViewController {
                 guard let uid = Auth.auth().currentUser?.uid else {return}
                 
                 if self.pretendingUser!.beenCaught {
-                    self.chatLogController?.navigationController?.popViewController(animated: true)
-                    let alert = UIAlertController(title: "Well Done!", message: "You both have caught each other", preferredStyle: .alert)
-                    alert.addAction(UIAlertAction(title: "Ok", style: .default, handler: {(_) in }))
-                    self.present(alert, animated: true, completion: nil)
-                    
                     let refBeenCaught = Database.database().reference().child("users-been-caught").child(uid).child(self.pretendingUser!.id!)
                     refBeenCaught.removeValue()
                     let refCaught = Database.database().reference().child("users-caught").child(self.pretendingUser!.representedUserId!).child(self.pretendingUser!.impersonatingUserId!)

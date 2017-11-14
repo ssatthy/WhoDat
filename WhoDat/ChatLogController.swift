@@ -51,6 +51,16 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         setupKeyboardObservers()
         setGuessButton()
         observeUserMessages()
+        observeAlert()
+    }
+    
+    func observeAlert() {
+        print("setup alert observe")
+        guard let uid = Auth.auth().currentUser?.uid else {return}
+        let ref = Database.database().reference().child("connections").child(uid).child(account!.id!)
+        ref.observe(.childRemoved, with: {(snapshot) in
+            self.showAlert()
+        })
     }
     
     var guessButton: UIBarButtonItem?
@@ -101,6 +111,14 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         
     }
     
+    func showAlert() {
+        let alert = UIAlertController(title: "Well Done!", message: "You both have caught each other.", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Ok", style: .default, handler: {(_) in
+            self.navigationController?.popViewController(animated: true)
+        }))
+        self.present(alert, animated: true, completion: nil)
+    }
+    
     @objc func handleSee() {
         print("See hanlded! :P")
     }
@@ -109,7 +127,6 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         
         let accountViewController = AccountViewController()
         accountViewController.pretendingUser = account
-        accountViewController.chatLogController = self
         let navController = UINavigationController(rootViewController: accountViewController)
         present(navController, animated: true, completion: nil)
     }
