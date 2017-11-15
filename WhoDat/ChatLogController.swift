@@ -71,9 +71,9 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         self.guessButton?.tintColor = UIColor.red
         navigationItem.rightBarButtonItem = guessButton
         
-        self.seeButton = UIBarButtonItem(title: "See", style: .plain, target: self, action: #selector(handleSee))
-        self.seeButton?.tintColor = UIColor.green
-        
+        let infoButton = UIButton(type: .infoLight)
+        infoButton.addTarget(self, action: #selector(handleSee), for: .touchUpInside)
+        self.seeButton = UIBarButtonItem(customView: infoButton)
         setupAttention()
     }
     
@@ -119,8 +119,68 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         self.present(alert, animated: true, completion: nil)
     }
     
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        print("back button pressed")
+        guard let uid = Auth.auth().currentUser?.uid else {return}
+        let ref = Database.database().reference().child("last-user-message-read").child(uid)
+        ref.updateChildValues([account!.id!: 0])
+    }
+    
     @objc func handleSee() {
-        print("See hanlded! :P")
+        if let representedUser = LocalUserRepository.shared().loadUserFromCache(uid: account!.representedUserId!) {
+            showUserProfile(account: representedUser)
+        } else {
+            Database.database().reference().child("users").child(account!.representedUserId!).observeSingleEvent(of: .value, with: {(snapshot) in
+                if let dictionary = snapshot.value as? [String: AnyObject] {
+                    let account = Account()
+                    account.id = snapshot.key
+                    account.setValuesForKeys(dictionary)
+                    LocalUserRepository.shared().setObject(account)
+                    
+                    self.showUserProfile(account: account)
+                }
+            })
+        }
+    }
+    
+    func showUserProfile(account: Account) {
+        let alert = UIAlertController(title: "You got 'em!", message: "You are chatting with:", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Ok", style: .default, handler: {(_) in }))
+        let heightConstraint = NSLayoutConstraint(item: alert.view, attribute: NSLayoutAttribute.height, relatedBy: NSLayoutRelation.equal, toItem: nil, attribute: NSLayoutAttribute.notAnAttribute, multiplier: 1, constant: self.view.frame.height * 0.35)
+        alert.view.addConstraint(heightConstraint)
+        
+        let profileImageView = UIImageView()
+        profileImageView.contentMode = .scaleAspectFill
+        profileImageView.layer.cornerRadius = (alert.view.frame.height * 4/36) * 1/2
+        profileImageView.clipsToBounds = true
+        profileImageView.translatesAutoresizingMaskIntoConstraints = false
+        
+        if let profileImageUrl = account.profileImageUrl {
+            profileImageView.loadImagesFromCache(urlString: profileImageUrl)
+        } else {
+            profileImageView.image = UIImage(named: "profilepic")
+        }
+        
+        alert.view.addSubview(profileImageView)
+        profileImageView.centerXAnchor.constraint(equalTo: alert.view.centerXAnchor).isActive = true
+        profileImageView.centerYAnchor.constraint(equalTo: alert.view.centerYAnchor, constant: -alert.view.frame.height * 1/36 * 1/4).isActive = true
+        profileImageView.heightAnchor.constraint(equalToConstant: alert.view.frame.height * 4/36).isActive = true
+        profileImageView.widthAnchor.constraint(equalToConstant: alert.view.frame.height * 4/36).isActive = true
+        
+        let nameLabel = UILabel()
+        nameLabel.font = UIFont.boldSystemFont(ofSize: alert.view.frame.height * 1/36 - 2)
+        nameLabel.text = account.name
+        nameLabel.textAlignment = .center
+        nameLabel.translatesAutoresizingMaskIntoConstraints = false
+        alert.view.addSubview(nameLabel)
+        
+        nameLabel.centerXAnchor.constraint(equalTo: profileImageView.centerXAnchor).isActive = true
+        nameLabel.topAnchor.constraint(equalTo: profileImageView.bottomAnchor, constant: alert.view.frame.height * 1/36 * 1/4).isActive = true
+        nameLabel.widthAnchor.constraint(equalTo: alert.view.widthAnchor).isActive = true
+        nameLabel.heightAnchor.constraint(equalToConstant: alert.view.frame.height * 1/36).isActive = true
+        
+        self.present(alert, animated: true, completion: nil)
     }
     
     @objc func handleGuess() {
@@ -322,12 +382,18 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
                 let lastUserMessageRef = Database.database().reference().child("last-user-message").child(fromId)
                 lastUserMessageRef.updateChildValues([self.account!.id! : [messageId: impersonatingUserId]])
                 
+                let lastUserMessageReadRef = Database.database().reference().child("last-user-message-read").child(fromId)
+                lastUserMessageReadRef.updateChildValues([self.account!.id! : 1])
+                
                 
                 let recipientMessageRef = Database.database().reference().child("user-messages").child(toId).child(fromId)
                 recipientMessageRef.updateChildValues([messageId : impersonatingUserId])
                 
                 let lastRecipientMessageRef = Database.database().reference().child("last-user-message").child(toId)
                 lastRecipientMessageRef.updateChildValues([impersonatingUserId : [messageId: self.account!.id!]])
+                
+                let lastRecipientMessageReadRef = Database.database().reference().child("last-user-message-read").child(toId)
+                lastRecipientMessageReadRef.updateChildValues([impersonatingUserId : 1])
                 
             }
         }

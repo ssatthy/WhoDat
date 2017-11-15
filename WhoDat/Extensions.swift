@@ -60,14 +60,14 @@ extension UIViewController {
         foundIndicator.translatesAutoresizingMaskIntoConstraints = false
         foundIndicator.layer.cornerRadius = 22
         foundIndicator.layer.masksToBounds = true
-        foundIndicator.backgroundColor = UIColor(r: 61, g: 151, b: 61)
+        foundIndicator.backgroundColor = UIColor(r: 0, g: 204, b: 0)
         foundIndicator.tag = 111
         
         let beenCaughtIndicator = UIView()
         beenCaughtIndicator.translatesAutoresizingMaskIntoConstraints = false
         beenCaughtIndicator.layer.cornerRadius = 22
         beenCaughtIndicator.layer.masksToBounds = true
-        beenCaughtIndicator.backgroundColor = UIColor(r: 151, g: 61, b: 61)
+        beenCaughtIndicator.backgroundColor = UIColor.red
         beenCaughtIndicator.tag = 222
         
         containerView.addSubview(foundIndicator)

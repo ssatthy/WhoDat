@@ -23,6 +23,7 @@ class AccountCell: UITableViewCell {
             }
             if oldValue == nil {
                 setupAttention(account: message!.account!)
+                setupUnread()
             }
         }
     }
@@ -39,7 +40,7 @@ class AccountCell: UITableViewCell {
     override func layoutSubviews() {
         super.layoutSubviews()
         
-        setTextLabelXY(x: 64)
+        setTextLabelXY(x: 74)
     }
     
     private func setTextLabelXY(x: CGFloat) {
@@ -61,7 +62,7 @@ class AccountCell: UITableViewCell {
         indicator.translatesAutoresizingMaskIntoConstraints = false
         indicator.layer.cornerRadius = 26
         indicator.layer.masksToBounds = true
-        indicator.backgroundColor = UIColor(r: 61, g: 151, b: 61)
+        indicator.backgroundColor = UIColor(r: 0, g: 204, b: 0)
         indicator.isHidden = true
         return indicator
     }()
@@ -71,7 +72,17 @@ class AccountCell: UITableViewCell {
         indicator.translatesAutoresizingMaskIntoConstraints = false
         indicator.layer.cornerRadius = 26
         indicator.layer.masksToBounds = true
-        indicator.backgroundColor = UIColor(r: 151, g: 61, b: 61)
+        indicator.backgroundColor = UIColor.red
+        indicator.isHidden = true
+        return indicator
+    }()
+    
+    let unread: UIView = {
+        let indicator = UIView()
+        indicator.translatesAutoresizingMaskIntoConstraints = false
+        indicator.layer.cornerRadius = 5
+        indicator.layer.masksToBounds = true
+        indicator.backgroundColor = UIColor(r: 0, g: 102, b: 204)
         indicator.isHidden = true
         return indicator
     }()
@@ -86,15 +97,21 @@ class AccountCell: UITableViewCell {
     override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
         super.init(style: .subtitle, reuseIdentifier: reuseIdentifier)
         
+        addSubview(unread)
         addSubview(foundIndicator)
         addSubview(beenCaughtIndicator)
         addSubview(profileImageView)
         
-        profileImageView.leftAnchor.constraint(equalTo: self.leftAnchor, constant: 8).isActive = true
+        unread.leftAnchor.constraint(equalTo: self.leftAnchor, constant: 4).isActive = true
+        unread.centerYAnchor.constraint(equalTo: self.centerYAnchor).isActive = true
+        unread.widthAnchor.constraint(equalToConstant: 10).isActive = true
+        unread.heightAnchor.constraint(equalToConstant: 10).isActive = true
+        
+        profileImageView.leftAnchor.constraint(equalTo: unread.leftAnchor, constant: 16).isActive = true
         profileImageView.centerYAnchor.constraint(equalTo: self.centerYAnchor).isActive = true
         profileImageView.widthAnchor.constraint(equalToConstant: 48).isActive = true
         profileImageView.heightAnchor.constraint(equalToConstant: 48).isActive = true
-
+        
         foundIndicator.centerXAnchor.constraint(equalTo: profileImageView.centerXAnchor).isActive = true
         foundIndicator.centerYAnchor.constraint(equalTo: self.centerYAnchor).isActive = true
         foundIndicator.widthAnchor.constraint(equalToConstant: 52).isActive = true
@@ -139,6 +156,21 @@ class AccountCell: UITableViewCell {
                 self.beenCaughtIndicator.isHidden = true
             }
             
+        })
+    }
+    
+    func setupUnread() {
+        unread.isHidden = true
+        guard let uid = Auth.auth().currentUser?.uid else {return}
+        let ref = Database.database().reference().child("last-user-message-read").child(uid).child(message!.account!.id!)
+        ref.observe(.value, with: {(snapshot) in
+            print("read observed")
+            print(snapshot)
+            if let read = snapshot.value as? Int, read == 1 {
+                self.unread.isHidden = false
+            } else {
+                self.unread.isHidden = true
+            }
         })
     }
     
