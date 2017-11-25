@@ -6,8 +6,12 @@ target 'WhoDat' do
   use_frameworks!
 
   # Pods for WhoDat
+pod “Firebase/Core”
 pod "Firebase/Database"
 pod "Firebase/Auth"
 pod "Firebase/Storage"
+pod “Firebase/Invites”
+pod “Firebase/Messaging”
+
 
 end

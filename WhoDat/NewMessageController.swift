@@ -8,8 +8,10 @@
 
 import UIKit
 import Firebase
+import Contacts
+import ContactsUI
 
-class NewMessageController: UITableViewController {
+class NewMessageController: UITableViewController, CNContactPickerDelegate , InviteDelegate  {
 
     let cellId = "cellId"
     var accounts = [Account]()
@@ -72,7 +74,7 @@ class NewMessageController: UITableViewController {
         
         let user = self.accounts[indexPath.row]
         cell.textLabel?.text = user.name
-        cell.detailTextLabel?.text = user.email
+        cell.detailTextLabel?.text = user.phone
         
         if let imageFileUrl = user.profileImageUrl {
             cell.profileImageView.loadImagesFromCache(urlString: imageFileUrl)
@@ -91,46 +93,69 @@ class NewMessageController: UITableViewController {
     }
     
     @objc func handleAdd() {
-        let alert = UIAlertController(title: "Add a friend", message: "Enter your friend's email", preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "Cancel", style: .default, handler: {(_) in }))
-        
-        let saveAction = UIAlertAction(title: "Add", style: .default, handler: { [weak alert] (_) in
-            let textField = alert?.textFields![0]
-            let email = textField?.text
-            
-            self.addNewConnection(email!)
-            
-        })
-        saveAction.isEnabled = false
-        alert.addAction(saveAction)
-        alert.addTextField { (textField) in
-            textField.placeholder = "Email address"
-            NotificationCenter.default.addObserver(forName: NSNotification.Name.UITextFieldTextDidChange, object: textField, queue: OperationQueue.main) { (notification) in
-                saveAction.isEnabled = self.isValidEmail(testStr: textField.text!)
-            }
+        let type = CNEntityType.contacts
+        let status = CNContactStore.authorizationStatus(for: type)
+        if status == CNAuthorizationStatus.authorized {
+            presentContacts()
+        } else if status == CNAuthorizationStatus.notDetermined {
+            let store = CNContactStore.init()
+            store.requestAccess(for: type, completionHandler: {(success, nil) in
+                if success {
+                    self.presentContacts()
+                }
+            })
         }
-        self.present(alert, animated: true, completion: nil)
     }
     
-    func addNewConnection(_ email: String) {
+    func presentContacts() {
+        let picker = CNContactPickerViewController.init()
+        picker.predicateForSelectionOfContact = NSPredicate(format: "phoneNumbers.@count > 0")
+        picker.displayedPropertyKeys = [CNContactPhoneNumbersKey]
+        picker.delegate = self
+        self.present(picker, animated: true, completion: nil)
+    }
+    
+    func contactPickerDidCancel(_ picker: CNContactPickerViewController) {
+        picker.dismiss(animated: true, completion: nil)
+    }
+    
+    func contactPicker(_ picker: CNContactPickerViewController, didSelect contactProperty: CNContactProperty) {
+        addNewConnection(contactProperty)
+    }
+    
+    func addNewConnection(_ contactProperty: CNContactProperty) {
         guard let uid = Auth.auth().currentUser?.uid else {
             return
         }
-        
-        let userRef = Database.database().reference().child("users").queryOrdered(byChild: "email").queryEqual(toValue: email)
-        userRef.observe(.childAdded, with: {(snapshot) in
+        let phone  = (contactProperty.value as? CNPhoneNumber)?.value(forKey: "digits")
+        let userRef = Database.database().reference().child("users").queryOrdered(byChild: "phone").queryEqual(toValue: phone)
+        userRef.observeSingleEvent(of: .value, with: {(snapshot) in
+            print("check if phone exists")
+            print(snapshot)
+            if let dictionary = snapshot.value as? [String: AnyObject] {
+                let userId = Array(dictionary)[0].key
+                let connectionRef = Database.database().reference().child("connections").child(uid)
+                connectionRef.updateChildValues([userId : "none"])
+                let connectionOtherRef = Database.database().reference().child("connections").child(userId)
+                connectionOtherRef.updateChildValues([uid : "none"])
+            } else {
+                print(contactProperty.contact.givenName)
+                let alert = UIAlertController(title: "Invite \(contactProperty.contact.givenName)", message: "You friend is not on WhoDat. Would you like to invite?", preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: "Cancel", style: .default, handler: nil))
+                alert.addAction(UIAlertAction(title: "Invite", style: .default, handler: {(_) in
+                    let objectsToShare = ["Hey \(contactProperty.contact.givenName)!, just try this one out!"]
+                    let activityController = UIActivityViewController(
+                        activityItems: objectsToShare,
+                        applicationActivities: nil)
+                    activityController.popoverPresentationController?.sourceRect = self.view.frame
+                    activityController.popoverPresentationController?.sourceView = self.view
+                    activityController.popoverPresentationController?.permittedArrowDirections = .any
+                    self.present(activityController, animated: true, completion: nil)
+                }))
+                self.present(alert, animated: true, completion: nil)
+            }
             
-            let userId = snapshot.key
-            let connectionRef = Database.database().reference().child("connections").child(uid)
-            connectionRef.updateChildValues([userId : "none"])
-                
-            let connectionOtherRef = Database.database().reference().child("connections").child(userId)
-            connectionOtherRef.updateChildValues([uid : "none"])
-
-            return
         })
-        
-        print("User not found!") // send invitation
     }
     
     var messageController: MessageController?

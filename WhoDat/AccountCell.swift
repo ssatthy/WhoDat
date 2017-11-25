@@ -166,10 +166,10 @@ class AccountCell: UITableViewCell {
         ref.observe(.value, with: {(snapshot) in
             print("read observed")
             print(snapshot)
-            if let read = snapshot.value as? Int, read == 1 {
-                self.unread.isHidden = false
-            } else {
+            if let read = snapshot.value as? Int, read == 0 {
                 self.unread.isHidden = true
+            } else {
+                self.unread.isHidden = false
             }
         })
     }

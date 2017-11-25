@@ -67,7 +67,7 @@ class AccountViewController: UITableViewController {
         
         let user = self.accounts[indexPath.row]
         cell.textLabel?.text = user.name
-        cell.detailTextLabel?.text = user.email
+        cell.detailTextLabel?.text = user.phone
         
         if let imageFileUrl = user.profileImageUrl {
             cell.profileImageView.loadImagesFromCache(urlString: imageFileUrl)

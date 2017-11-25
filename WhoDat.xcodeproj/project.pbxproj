@@ -22,6 +22,7 @@
 		5C48E00B1F93362500CD2702 /* AccountCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C48E00A1F93362500CD2702 /* AccountCell.swift */; };
 		5C48E00D1F94772800CD2702 /* MessageCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C48E00C1F94772800CD2702 /* MessageCell.swift */; };
 		5C62E33A1FB812CB008F7496 /* LocalUserRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C62E3391FB812CB008F7496 /* LocalUserRepository.swift */; };
+		5CADD12B1FC88C0000126BA9 /* ALGReversedFlowLayout.m in Sources */ = {isa = PBXBuildFile; fileRef = 5CADD1291FC88BFB00126BA9 /* ALGReversedFlowLayout.m */; };
 		5CBB52001FA04BA800371ACA /* AccountViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CBB51FF1FA04BA800371ACA /* AccountViewController.swift */; };
 		5CCF4BEB1FA061CA00782528 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5CCF4BEA1FA061CA00782528 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
@@ -43,6 +44,12 @@
 		5C48E00A1F93362500CD2702 /* AccountCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountCell.swift; sourceTree = "<group>"; };
 		5C48E00C1F94772800CD2702 /* MessageCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageCell.swift; sourceTree = "<group>"; };
 		5C62E3391FB812CB008F7496 /* LocalUserRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalUserRepository.swift; sourceTree = "<group>"; };
+		5C83947D1FC00D2600C87DC5 /* WhoDat.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WhoDat.entitlements; sourceTree = "<group>"; };
+		5CADD1231FC8827C00126BA9 /* WhoDat-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "WhoDat-Bridging-Header.h"; sourceTree = "<group>"; };
+		5CADD1251FC8860700126BA9 /* ALGReversedFlowLayout.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ALGReversedFlowLayout.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		5CADD1271FC8890600126BA9 /* ALGReversedFlowLayout.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ALGReversedFlowLayout.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		5CADD1291FC88BFB00126BA9 /* ALGReversedFlowLayout.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ALGReversedFlowLayout.m; sourceTree = "<group>"; };
+		5CADD12A1FC88C0000126BA9 /* ALGReversedFlowLayout.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ALGReversedFlowLayout.h; sourceTree = "<group>"; };
 		5CBB51FF1FA04BA800371ACA /* AccountViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountViewController.swift; sourceTree = "<group>"; };
 		5CCF4BEA1FA061CA00782528 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		684AF82A0117A3EA6984AADA /* Pods_WhoDat.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_WhoDat.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -83,6 +90,8 @@
 		5C02CFB41F91BC7900BD23C4 /* WhoDat */ = {
 			isa = PBXGroup;
 			children = (
+				5CADD1281FC88A2B00126BA9 /* lib */,
+				5C83947D1FC00D2600C87DC5 /* WhoDat.entitlements */,
 				5C48E0091F93361200CD2702 /* View */,
 				5C48E0021F92F2F300CD2702 /* Helper */,
 				5C48DFFD1F922C1100CD2702 /* Model */,
@@ -136,6 +145,16 @@
 			name = View;
 			sourceTree = "<group>";
 		};
+		5CADD1281FC88A2B00126BA9 /* lib */ = {
+			isa = PBXGroup;
+			children = (
+				5CADD12A1FC88C0000126BA9 /* ALGReversedFlowLayout.h */,
+				5CADD1291FC88BFB00126BA9 /* ALGReversedFlowLayout.m */,
+				5CADD1231FC8827C00126BA9 /* WhoDat-Bridging-Header.h */,
+			);
+			name = lib;
+			sourceTree = "<group>";
+		};
 		A92B35287AA4B7A8F93E0D05 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
@@ -148,6 +167,8 @@
 		F01E5737B9ADA7270E291F20 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				5CADD1271FC8890600126BA9 /* ALGReversedFlowLayout.framework */,
+				5CADD1251FC8860700126BA9 /* ALGReversedFlowLayout.framework */,
 				684AF82A0117A3EA6984AADA /* Pods_WhoDat.framework */,
 			);
 			name = Frameworks;
@@ -189,8 +210,19 @@
 					5C02CFB11F91BC7900BD23C4 = {
 						CreatedOnToolsVersion = 8.3.3;
 						DevelopmentTeam = 5X7FZQN75F;
-						LastSwiftMigration = 0900;
+						LastSwiftMigration = 0910;
 						ProvisioningStyle = Automatic;
+						SystemCapabilities = {
+							com.apple.BackgroundModes = {
+								enabled = 1;
+							};
+							com.apple.Push = {
+								enabled = 1;
+							};
+							com.apple.iCloud = {
+								enabled = 0;
+							};
+						};
 					};
 				};
 			};
@@ -251,15 +283,21 @@
 			);
 			inputPaths = (
 				"${SRCROOT}/Pods/Target Support Files/Pods-WhoDat/Pods-WhoDat-frameworks.sh",
+				"${BUILT_PRODUCTS_DIR}/GTMOAuth2/GTMOAuth2.framework",
 				"${BUILT_PRODUCTS_DIR}/GTMSessionFetcher/GTMSessionFetcher.framework",
+				"${BUILT_PRODUCTS_DIR}/GoogleAPIClientForREST/GoogleAPIClientForREST.framework",
 				"${BUILT_PRODUCTS_DIR}/GoogleToolboxForMac/GoogleToolboxForMac.framework",
+				"${BUILT_PRODUCTS_DIR}/Protobuf/Protobuf.framework",
 				"${BUILT_PRODUCTS_DIR}/leveldb-library/leveldb.framework",
 				"${BUILT_PRODUCTS_DIR}/nanopb/nanopb.framework",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/GTMOAuth2.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/GTMSessionFetcher.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/GoogleAPIClientForREST.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/GoogleToolboxForMac.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Protobuf.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/leveldb.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/nanopb.framework",
 			);
@@ -274,9 +312,14 @@
 			files = (
 			);
 			inputPaths = (
+				"${SRCROOT}/Pods/Target Support Files/Pods-WhoDat/Pods-WhoDat-resources.sh",
+				"${PODS_ROOT}/FirebaseInvites/Resources/GINInviteResources.bundle",
+				"${PODS_ROOT}/FirebaseInvites/Resources/GPPACLPickerResources.bundle",
+				"${PODS_ROOT}/GoogleSignIn/Resources/GoogleSignIn.bundle",
 			);
 			name = "[CP] Copy Pods Resources";
 			outputPaths = (
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -296,6 +339,7 @@
 				5C48E00B1F93362500CD2702 /* AccountCell.swift in Sources */,
 				5CBB52001FA04BA800371ACA /* AccountViewController.swift in Sources */,
 				5C48E0011F92599E00CD2702 /* LoginHandler.swift in Sources */,
+				5CADD12B1FC88C0000126BA9 /* ALGReversedFlowLayout.m in Sources */,
 				5C48DFFC1F92260C00CD2702 /* NewMessageController.swift in Sources */,
 				5C48E0081F932B5300CD2702 /* Message.swift in Sources */,
 				5C02CFB81F91BC7900BD23C4 /* MessageController.swift in Sources */,
@@ -431,12 +475,36 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 9FCE1432D3296234FBA9ADAD /* Pods-WhoDat.debug.xcconfig */;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = WhoDat/WhoDat.entitlements;
 				DEVELOPMENT_TEAM = 5X7FZQN75F;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"${PODS_ROOT}/Firebase/Core/Sources",
+					"\"${PODS_ROOT}/leveldb-library\"",
+					"\"${PODS_ROOT}/leveldb-library/include\"",
+					"$(inherited)",
+					"\"${PODS_ROOT}/Headers/Public\"",
+					"\"${PODS_ROOT}/Headers/Public/Firebase\"",
+					"\"${PODS_ROOT}/Headers/Public/FirebaseAnalytics\"",
+					"\"${PODS_ROOT}/Headers/Public/FirebaseAuth\"",
+					"\"${PODS_ROOT}/Headers/Public/FirebaseCore\"",
+					"\"${PODS_ROOT}/Headers/Public/FirebaseDatabase\"",
+					"\"${PODS_ROOT}/Headers/Public/FirebaseDynamicLinks\"",
+					"\"${PODS_ROOT}/Headers/Public/FirebaseInstanceID\"",
+					"\"${PODS_ROOT}/Headers/Public/FirebaseInvites\"",
+					"\"${PODS_ROOT}/Headers/Public/FirebaseMessaging\"",
+					"\"${PODS_ROOT}/Headers/Public/FirebaseStorage\"",
+					"\"${PODS_ROOT}/Headers/Public/GoogleSignIn\"",
+				);
 				INFOPLIST_FILE = WhoDat/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.likethatalsocan.WhoDat;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "WhoDat/WhoDat-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_SWIFT3_OBJC_INFERENCE = Off;
 				SWIFT_VERSION = 4.0;
 			};
@@ -446,12 +514,35 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = B2711B951D00A9703ED19542 /* Pods-WhoDat.release.xcconfig */;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = WhoDat/WhoDat.entitlements;
 				DEVELOPMENT_TEAM = 5X7FZQN75F;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"${PODS_ROOT}/Firebase/Core/Sources",
+					"\"${PODS_ROOT}/leveldb-library\"",
+					"\"${PODS_ROOT}/leveldb-library/include\"",
+					"$(inherited)",
+					"\"${PODS_ROOT}/Headers/Public\"",
+					"\"${PODS_ROOT}/Headers/Public/Firebase\"",
+					"\"${PODS_ROOT}/Headers/Public/FirebaseAnalytics\"",
+					"\"${PODS_ROOT}/Headers/Public/FirebaseAuth\"",
+					"\"${PODS_ROOT}/Headers/Public/FirebaseCore\"",
+					"\"${PODS_ROOT}/Headers/Public/FirebaseDatabase\"",
+					"\"${PODS_ROOT}/Headers/Public/FirebaseDynamicLinks\"",
+					"\"${PODS_ROOT}/Headers/Public/FirebaseInstanceID\"",
+					"\"${PODS_ROOT}/Headers/Public/FirebaseInvites\"",
+					"\"${PODS_ROOT}/Headers/Public/FirebaseMessaging\"",
+					"\"${PODS_ROOT}/Headers/Public/FirebaseStorage\"",
+					"\"${PODS_ROOT}/Headers/Public/GoogleSignIn\"",
+				);
 				INFOPLIST_FILE = WhoDat/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.likethatalsocan.WhoDat;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "WhoDat/WhoDat-Bridging-Header.h";
 				SWIFT_SWIFT3_OBJC_INFERENCE = Off;
 				SWIFT_VERSION = 4.0;
 			};

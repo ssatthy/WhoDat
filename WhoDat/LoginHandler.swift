@@ -41,41 +41,43 @@ extension LoginController: UIImagePickerControllerDelegate, UINavigationControll
         
     }
     
-    func handleRegister() {
-        guard let email = emailField.text, let password = passwordField.text, let name = nameField.text
+    func handleRegister(verificationCode: String) {
+        guard let phone = phoneField.text, let name = nameField.text
             else {
                 print("Invalid form inputs!")
                 return
         }
         
-        Auth.auth().createUser(withEmail: email, password: password,
-                               completion: {(user: User?, error) in
-                                if error != nil {
-                                    print(error ?? "Error when registering new user!")
-                                    return
-                                }
-                                guard let uid = user?.uid else {
-                                    return
-                                }
-                                
-                                let imageName = NSUUID().uuidString
-                                let storageRef = Storage.storage().reference().child("profile_pictures").child("\(imageName).jpg")
-                                
-                                if let profileImage = self.profilePictureView.image, let uploadData = UIImageJPEGRepresentation(profileImage, 0.1) {
-                                    storageRef.putData(uploadData, metadata: nil, completion: {(metadata, error) in
-                                        if error != nil {
-                                            print(error ?? "Error while uploading profile picture!")
-                                            return
-                                        }
-                                        
-                                        if let imageUrl = metadata?.downloadURL()?.absoluteString {
-                                            let values = ["name" : name, "email" : email, "profileImageUrl": imageUrl]
-                                            self.registerAccount(uid: uid, values: values)
-                                        }
-                                    
-                                    })
-                                }
-        })
+        let verificationID = UserDefaults.standard.string(forKey: "authVerificationID")
+        let credential = PhoneAuthProvider.provider().credential(
+            withVerificationID: verificationID!,
+            verificationCode: verificationCode)
+        
+        Auth.auth().signIn(with: credential) { (user, error) in
+            if error != nil {
+                print(error ?? "Error when registering new user!")
+                return
+            }
+            guard let uid = user?.uid else {return}
+            
+            let imageName = NSUUID().uuidString
+            let storageRef = Storage.storage().reference().child("profile_pictures").child("\(imageName).jpg")
+            
+            if let profileImage = self.profilePictureView.image, let uploadData = UIImageJPEGRepresentation(profileImage, 0.1) {
+                storageRef.putData(uploadData, metadata: nil, completion: {(metadata, error) in
+                    if error != nil {
+                        print(error ?? "Error while uploading profile picture!")
+                        return
+                    }
+                    
+                    if let imageUrl = metadata?.downloadURL()?.absoluteString {
+                        let values = ["name" : name, "phone" : phone, "profileImageUrl": imageUrl, "token": Messaging.messaging().fcmToken!]
+                        self.registerAccount(uid: uid, values: values)
+                    }
+                    
+                })
+            }
+        }
     }
     
     private func registerAccount(uid: String, values: [String: Any]) {
@@ -89,10 +91,9 @@ extension LoginController: UIImagePickerControllerDelegate, UINavigationControll
                     return
                 }
                 
-                let account = Account()
-                account.setValuesForKeys(values)
-                self.messageController?.setNavBar(account: account)
-                
+                LocalUserRepository.shared().reset()
+                self.messageController?.fetchUserAndSetNavBar()
+
                 self.dismiss(animated: true, completion: nil)
         })
 

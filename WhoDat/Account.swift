@@ -12,8 +12,9 @@ import UIKit
 
     var id: String?
     var name: String?
-    var email: String?
+    var phone: String?
     var profileImageUrl: String?
+    var token: String?
 
     var representedUserId: String?
     

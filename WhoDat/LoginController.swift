@@ -13,9 +13,6 @@ class LoginController: UIViewController {
 
     var messageController: MessageController? = nil
     
-    var mode: Bool = true
-    
-    
     let inputsContainerView: UIView = {
         let view = UIView()
         view.backgroundColor = UIColor.white
@@ -25,7 +22,7 @@ class LoginController: UIViewController {
         return view
     }()
     
-    lazy var loginRegisterButton: UIButton = {
+    lazy var loginButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor(r: 80, g: 101, b: 161)
         button.setTitle("Login", for: .normal)
@@ -33,23 +30,9 @@ class LoginController: UIViewController {
         button.titleLabel?.font = UIFont.boldSystemFont(ofSize: 16)
         button.translatesAutoresizingMaskIntoConstraints = false
         
-        button.addTarget(self, action: #selector(handleLoginRegister), for: .touchUpInside)
+        button.addTarget(self, action: #selector(handleLogin), for: .touchUpInside)
         
         return button
-    }()
-    
-    lazy var newAccountLink: UILabel = {
-        let label = UILabel()
-        label.text = "Register?"
-        label.font = UIFont.boldSystemFont(ofSize: 12)
-        label.textAlignment = .right
-        label.textColor = UIColor.white
-        label.isUserInteractionEnabled = true
-        label.translatesAutoresizingMaskIntoConstraints = false
-        let tap = UITapGestureRecognizer(target: self, action: #selector(handleNewAccount))
-        label.addGestureRecognizer(tap)
-        
-        return label
     }()
     
     let nameField: UITextField = {
@@ -66,27 +49,12 @@ class LoginController: UIViewController {
         return separator
     }()
     
-    let emailField: UITextField = {
+    let phoneField: UITextField = {
         let email = UITextField()
-        email.placeholder = "Email"
+        email.placeholder = "Phone"
         email.translatesAutoresizingMaskIntoConstraints = false
-        email.keyboardType = UIKeyboardType.emailAddress
+        email.keyboardType = UIKeyboardType.phonePad
         return email
-    }()
-    
-    let emailSeparator: UIView = {
-        let separator = UIView()
-        separator.backgroundColor = UIColor(r: 220, g: 220, b: 220)
-        separator.translatesAutoresizingMaskIntoConstraints = false
-        return separator
-    }()
-
-    let passwordField: UITextField = {
-        let password = UITextField()
-        password.placeholder = "Password"
-        password.isSecureTextEntry = true
-        password.translatesAutoresizingMaskIntoConstraints = false
-        return password
     }()
 
     lazy var profilePictureView: UIImageView = {
@@ -102,57 +70,37 @@ class LoginController: UIViewController {
         return imageView
     }()
     
-
-    @objc func handleNewAccount() {
-        mode = !mode
-        newAccountLink.text = mode ? "Register?" : "Login?"
-        handleLoginRegisterChange()
-    }
-    
-    func handleLoginRegisterChange() {
-        
-        loginRegisterButton.setTitle(mode ? "Login" : "Register" , for: .normal)
-        
-        inputsContainerViewHeighAnchor?.constant = mode ? 100 : 150
-        
-        nameFieldHeightAnchor?.isActive = false
-        nameFieldHeightAnchor = nameField.heightAnchor.constraint(equalTo: inputsContainerView.heightAnchor, multiplier: mode ? 0 : 1/3)
-        nameFieldHeightAnchor?.isActive = true
-        nameField.isHidden = mode
-        
-        emailFieldHeightAnchor?.isActive = false
-        emailFieldHeightAnchor = emailField.heightAnchor.constraint(equalTo: inputsContainerView.heightAnchor, multiplier: mode ? 1/2 : 1/3)
-        emailFieldHeightAnchor?.isActive = true
-        
-        passwordFieldHeightAnchor?.isActive = false
-        passwordFieldHeightAnchor = passwordField.heightAnchor.constraint(equalTo: inputsContainerView.heightAnchor, multiplier: mode ? 1/2 : 1/3)
-        passwordFieldHeightAnchor?.isActive = true
-        
-    }
-    @objc func handleLoginRegister() {
-        if mode {
-            hanleLogin()
-        } else {
-            handleRegister()
-        }
-    }
-    
-    func hanleLogin() {
-        guard let email = emailField.text, let password = passwordField.text
-            else {
+    @objc func handleLogin() {
+        guard let phone = phoneField.text else {
                 print("Invalid form inputs!")
                 return
+            }
+        
+        PhoneAuthProvider.provider().verifyPhoneNumber(phone, uiDelegate: nil, completion: {(verificationID, error) in
+            if error != nil {
+                print(error ?? "Something went wrong while signing up..")
+            } else {
+                UserDefaults.standard.set(verificationID, forKey: "authVerificationID")
+            }
+        })
+        
+        let registerAlert = UIAlertController(title: "Verify your phone number", message: "Enter the 6-digit code sent to \(phone)", preferredStyle: .alert)
+        registerAlert.addTextField { (textField) in
+            textField.placeholder = "6-digit code"
+            textField.keyboardType = .numberPad
         }
         
-        Auth.auth().signIn(withEmail: email, password: password, completion: { (user, error) in
-            if error != nil {
-                print(error ?? "Signin failed")
-                return
-            }
-            LocalUserRepository.shared().reset()
-            self.messageController?.fetchUserAndSetNavBar()
-            self.dismiss(animated: true, completion: nil)
+        let verify = UIAlertAction(title: "Verify", style: .default, handler: {(UIAlertAction) in
+            
+            let textField = registerAlert.textFields![0]
+            let code = textField.text
+            self.handleRegister(verificationCode: code!)
         })
+        let cancel = UIAlertAction(title: "Cancel", style: .default, handler: nil)
+        registerAlert.addAction(cancel)
+        registerAlert.addAction(verify)
+        present(registerAlert, animated: true, completion: nil)
+        
     }
     
     override func viewDidLoad() {
@@ -161,12 +109,10 @@ class LoginController: UIViewController {
         view.backgroundColor = UIColor(r: 61, g: 91, b: 151)
         self.hideKeyboardWhenTappedAround()
         view.addSubview(inputsContainerView)
-        view.addSubview(loginRegisterButton)
+        view.addSubview(loginButton)
         view.addSubview(profilePictureView)
-        view.addSubview(newAccountLink)
         
         setupInputsContainerView()
-        setupLoginRegiterSetup()
         setupProfilePicture()
 
     }
@@ -179,26 +125,18 @@ class LoginController: UIViewController {
         
     }
     
-    var inputsContainerViewHeighAnchor: NSLayoutConstraint?
-    var nameFieldHeightAnchor: NSLayoutConstraint?
-    var emailFieldHeightAnchor: NSLayoutConstraint?
-    var passwordFieldHeightAnchor: NSLayoutConstraint?
-    
     func setupInputsContainerView() {
 
         inputsContainerView.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
         inputsContainerView.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
         inputsContainerView.widthAnchor.constraint(equalTo: view.widthAnchor, constant: -24).isActive = true
-        inputsContainerViewHeighAnchor = inputsContainerView.heightAnchor.constraint(equalToConstant: 100)
-        inputsContainerViewHeighAnchor?.isActive = true
+        inputsContainerView.heightAnchor.constraint(equalToConstant: 100).isActive = true
         
         inputsContainerView.addSubview(nameField)
         nameField.topAnchor.constraint(equalTo: inputsContainerView.topAnchor).isActive = true
         nameField.leftAnchor.constraint(equalTo: inputsContainerView.leftAnchor, constant: 12).isActive = true
         nameField.widthAnchor.constraint(equalTo: inputsContainerView.widthAnchor).isActive = true
-        nameFieldHeightAnchor = nameField.heightAnchor.constraint(equalTo: inputsContainerView.heightAnchor, multiplier: 0)
-        nameFieldHeightAnchor?.isActive = true
-        nameField.isHidden = mode
+        nameField.heightAnchor.constraint(equalTo: inputsContainerView.heightAnchor, multiplier: 1/2).isActive = true
         
         inputsContainerView.addSubview(nameSeparator)
         
@@ -207,40 +145,16 @@ class LoginController: UIViewController {
         nameSeparator.widthAnchor.constraint(equalTo: inputsContainerView.widthAnchor).isActive = true
         nameSeparator.heightAnchor.constraint(equalToConstant: 1).isActive = true
         
-        inputsContainerView.addSubview(emailField)
-        emailField.topAnchor.constraint(equalTo: nameField.bottomAnchor).isActive = true
-        emailField.leftAnchor.constraint(equalTo: inputsContainerView.leftAnchor, constant: 12).isActive = true
-        emailField.widthAnchor.constraint(equalTo: inputsContainerView.widthAnchor).isActive = true
-        emailFieldHeightAnchor = emailField.heightAnchor.constraint(equalTo: inputsContainerView.heightAnchor, multiplier: 1/2)
-        emailFieldHeightAnchor?.isActive = true
+        inputsContainerView.addSubview(phoneField)
+        phoneField.topAnchor.constraint(equalTo: nameField.bottomAnchor).isActive = true
+        phoneField.leftAnchor.constraint(equalTo: inputsContainerView.leftAnchor, constant: 12).isActive = true
+        phoneField.widthAnchor.constraint(equalTo: inputsContainerView.widthAnchor).isActive = true
+        phoneField.heightAnchor.constraint(equalTo: inputsContainerView.heightAnchor, multiplier: 1/2).isActive = true
         
-        inputsContainerView.addSubview(emailSeparator)
-        emailSeparator.leftAnchor.constraint(equalTo: inputsContainerView.leftAnchor).isActive = true
-        emailSeparator.topAnchor.constraint(equalTo: emailField.bottomAnchor).isActive = true
-        emailSeparator.widthAnchor.constraint(equalTo: inputsContainerView.widthAnchor).isActive = true
-        emailSeparator.heightAnchor.constraint(equalToConstant: 1).isActive = true
-        
-        inputsContainerView.addSubview(passwordField)
-        passwordField.topAnchor.constraint(equalTo: emailField.bottomAnchor).isActive = true
-        passwordField.leftAnchor.constraint(equalTo: inputsContainerView.leftAnchor, constant: 12).isActive = true
-        passwordField.widthAnchor.constraint(equalTo: inputsContainerView.widthAnchor).isActive = true
-        passwordFieldHeightAnchor = passwordField.heightAnchor.constraint(equalTo: inputsContainerView.heightAnchor, multiplier: 1/2)
-        passwordFieldHeightAnchor?.isActive = true
-        
-    }
-    
-    func setupLoginRegiterSetup() {
-        loginRegisterButton.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
-        loginRegisterButton.topAnchor.constraint(equalTo: inputsContainerView.bottomAnchor, constant: 12).isActive = true
-        loginRegisterButton.widthAnchor.constraint(equalTo: inputsContainerView.widthAnchor).isActive = true
-        loginRegisterButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
-        
-        
-        newAccountLink.rightAnchor.constraint(equalTo: inputsContainerView.rightAnchor).isActive = true
-        newAccountLink.topAnchor.constraint(equalTo: loginRegisterButton.bottomAnchor).isActive = true
-        newAccountLink.widthAnchor.constraint(equalTo: inputsContainerView.widthAnchor, multiplier: 1/3).isActive = true
-        newAccountLink.heightAnchor.constraint(equalToConstant: 30).isActive = true
-        
+        loginButton.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
+        loginButton.topAnchor.constraint(equalTo: inputsContainerView.bottomAnchor, constant: 12).isActive = true
+        loginButton.widthAnchor.constraint(equalTo: inputsContainerView.widthAnchor).isActive = true
+        loginButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
     }
     
     override var preferredStatusBarStyle: UIStatusBarStyle {
