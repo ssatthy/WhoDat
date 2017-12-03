@@ -8,12 +8,15 @@
 
 import UIKit
 import Firebase
+import GoogleMobileAds
 
-class MessageController: UITableViewController {
+class MessageController: UITableViewController, GADBannerViewDelegate {
     
     var messages = [Message]()
     
     var chatLogControllers = [String: ChatLogController]()
+    
+    var bannerView: GADBannerView!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -23,7 +26,40 @@ class MessageController: UITableViewController {
         checkIfUserIsLoggedIn()
         let image = UIImage(named: "new_message_icon")
         navigationItem.rightBarButtonItem = UIBarButtonItem(image: image, style: .plain, target: self, action: #selector(handleNewMessage))
+        
+        bannerView = GADBannerView(adSize: kGADAdSizeSmartBannerPortrait)
+        bannerView.adUnitID = "ca-app-pub-2292982215135045/2290201824"
+        bannerView.rootViewController = self
+        bannerView.delegate = self
+        let request = GADRequest()
+        request.testDevices = [kGADSimulatorID]
+        bannerView.load(request)
     }
+    
+    lazy var adContainerView: UIView = {
+        let containerView = UIView()
+        containerView.frame = CGRect(x: 0, y: 0, width: bannerView.frame.size.width, height: bannerView.frame.size.height)
+        containerView.backgroundColor = UIColor.white
+        containerView.addSubview(bannerView)
+        bannerView.translatesAutoresizingMaskIntoConstraints = false
+        bannerView.topAnchor.constraint(equalTo: containerView.topAnchor).isActive = true
+        bannerView.centerXAnchor.constraint(equalTo: containerView.centerXAnchor).isActive = true
+        bannerView.centerYAnchor.constraint(equalTo: containerView.centerYAnchor).isActive = true
+        
+        
+        return containerView
+    }()
+    
+    override var inputAccessoryView: UIView? {
+        get {
+            return adContainerView
+        }
+    }
+    
+    override var canBecomeFirstResponder: Bool {
+        return true
+    }
+
     
     let operations = OperationQueue()
     let group = DispatchGroup()

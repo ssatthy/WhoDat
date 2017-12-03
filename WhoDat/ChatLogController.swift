@@ -8,8 +8,11 @@
 
 import UIKit
 import Firebase
+import GoogleMobileAds
 
-class ChatLogController: UICollectionViewController, UITextFieldDelegate, UICollectionViewDelegateFlowLayout {
+class ChatLogController: UICollectionViewController, UITextFieldDelegate, UICollectionViewDelegateFlowLayout, GADInterstitialDelegate {
+    
+    var interstitial: GADInterstitial!
     
     lazy var inputTextField: UITextField = {
         let textField = UITextField()
@@ -30,8 +33,6 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     
     let cellId = "cellId"
     
-    var refreshControl:UIRefreshControl!
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -42,12 +43,34 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         collectionView?.keyboardDismissMode = .interactive
 
         messages = [Message]()
-        setupKeyboardObservers()
+        //setupKeyboardObservers()
         setGuessButton()
-        observeUserMessages()
+        //observeUserMessages()
         observeAlert()
+        interstitial = createAndLoadInterstitial()
     }
     
+    func createAndLoadInterstitial() -> GADInterstitial {
+        interstitial = GADInterstitial(adUnitID: "ca-app-pub-2292982215135045/9885798429")
+        interstitial.delegate = self
+        let request = GADRequest()
+        request.testDevices = [kGADSimulatorID]
+        interstitial.load(request)
+        return interstitial
+    }
+    
+    func interstitialDidDismissScreen(_ ad: GADInterstitial) {
+        interstitial = createAndLoadInterstitial()
+        handleSee()
+    }
+    
+    @objc func showAds() {
+        if interstitial.isReady {
+            interstitial.present(fromRootViewController: self)
+        } else {
+            handleSee()
+        }
+    }
     func observeAlert() {
         print("setup alert observe")
         guard let uid = Auth.auth().currentUser?.uid else {return}
@@ -66,7 +89,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         navigationItem.rightBarButtonItem = guessButton
         
         let infoButton = UIButton(type: .infoLight)
-        infoButton.addTarget(self, action: #selector(handleSee), for: .touchUpInside)
+        infoButton.addTarget(self, action: #selector(showAds), for: .touchUpInside)
         self.seeButton = UIBarButtonItem(customView: infoButton)
         setupAttention()
     }
@@ -80,9 +103,16 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         let refCaught = Database.database().reference().child("users-caught").child(uid).queryOrderedByKey()
             .queryEqual(toValue: account!.id!)
         refCaught.observe(.value, with: {(snapshot) in
-            if let _ = snapshot.value as? [String: Int] {
-                foundIndicator?.isHidden = false
-                self.navigationItem.rightBarButtonItem = self.seeButton
+            if let dictionary = snapshot.value as? [String: Int] {
+                let value = Array(dictionary)[0].value
+                if value == 1 {
+                    foundIndicator?.isHidden = false
+                    self.navigationItem.rightBarButtonItem = self.seeButton
+                } else if value == 0 {
+                    self.navigationItem.rightBarButtonItem = nil
+                    foundIndicator?.isHidden = true
+                }
+                
             } else {
                 self.navigationItem.rightBarButtonItem = self.guessButton
                 foundIndicator?.isHidden = true
@@ -113,30 +143,34 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         self.present(alert, animated: true, completion: nil)
     }
     
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        print("back button pressed")
-        guard let uid = Auth.auth().currentUser?.uid else {return}
-        let ref = Database.database().reference().child("last-user-message-read").child(uid)
-        ref.updateChildValues([account!.id!: 0])
-    }
-    
-    
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        print("user message selected")
+        observeUserMessages()
+        setupKeyboardObservers()
         guard let uid = Auth.auth().currentUser?.uid else {return}
-        let ref = Database.database().reference().child("last-user-message-read").child(uid).child(account!.id!)
-        ref.runTransactionBlock({(currentCount) -> TransactionResult in
-            if let count = currentCount.value as? Int {
-                DispatchQueue.main.async {
-                    UIApplication.shared.applicationIconBadgeNumber = UIApplication.shared.applicationIconBadgeNumber - count
+        let refUpdate = Database.database().reference().child("last-user-message-read").child(uid)
+        refUpdate.updateChildValues([account!.id!: 0])
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        setBadgeCount()
+    }
+    
+    func setBadgeCount() {
+        guard let uid = Auth.auth().currentUser?.uid else {return}
+        let ref = Database.database().reference().child("last-user-message-read").child(uid)
+        ref.observeSingleEvent(of: .value, with: {(snapshot) in
+            if let dictionary = snapshot.value as? [String: Int] {
+                var total = 0 ;
+                for item in dictionary {
+                    total += item.value
                 }
-                currentCount.value = 0
+                DispatchQueue.main.async {
+                    UIApplication.shared.applicationIconBadgeNumber = total
+                }
             }
-            return TransactionResult.success(withValue: currentCount)
         })
-        
     }
     
     @objc func handleSee() {
@@ -267,20 +301,25 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         NotificationCenter.default.removeObserver(self)
-        print("dissappeared")
+        guard let uid = Auth.auth().currentUser?.uid, let toId = account?.representedUserId else {
+            return
+        }
+        let ref = Database.database().reference().child("user-messages").child(uid).child(toId)
+        ref.removeAllObservers()
+        setBadgeCount()
+        
     }
     
     var pullingDown = false
     
     override func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        if(scrollView.contentOffset.y < -130) {
+        if(!pullingDown && scrollView.contentOffset.y < -100) {
             pullingDown = true
-        }
-        if(fabs(scrollView.contentOffset.y) > -75 && pullingDown) {
-            pullingDown = false
             observeMoreUserMessages()
         }
-        
+        if(scrollView.contentOffset.y > -80 && pullingDown) {
+            pullingDown = false
+        }
     }
     
     @objc func observeMoreUserMessages() {
@@ -290,7 +329,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
                 return
             }
             let lastMessageId = messages[0].id
-            let ref = Database.database().reference().child("user-messages").child(uid).child(toId).queryOrderedByKey().queryEnding(atValue: lastMessageId).queryLimited(toLast: 13)
+            let ref = Database.database().reference().child("user-messages").child(uid).child(toId).queryOrderedByKey().queryEnding(atValue: lastMessageId).queryLimited(toLast: 20)
             ref.observeSingleEvent(of: .value, with: {(snapshot) in
                 if var dictionary = snapshot.value as? [String: String] {
                     dictionary.removeValue(forKey: lastMessageId!)
@@ -301,6 +340,25 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
             })
         }
     }
+    
+    private func fetchMoreMessage(messageId: String) {
+        let messageRef = Database.database().reference().child("messages").child(messageId)
+        messageRef.observeSingleEvent(of: .value, with: {(snapshot) in
+            
+            guard let dictionary = snapshot.value as? [String: Any] else {return}
+            let message = Message()
+            message.setValuesForKeys(dictionary)
+            message.id = snapshot.key
+            if !self.messages.contains{ $0.id == message.id } {
+                self.messages.append(message)
+                self.messages.sort(by: {($0.timestamp?.intValue)! < ($1.timestamp?.intValue)!})
+                let itemRow = self.messages.index(of: message)
+                let indexPath = IndexPath(row: itemRow!, section: 0)
+                self.collectionView?.insertItems(at: [indexPath])
+            }
+        })
+    }
+    
     var messages = [Message]()
     
     @objc func observeUserMessages() {
@@ -308,11 +366,21 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         guard let uid = Auth.auth().currentUser?.uid, let toId = account?.representedUserId else {
             return
         }
-        let ref = Database.database().reference().child("user-messages").child(uid).child(toId).queryLimited(toLast: 13)
-        ref.observe(.childAdded, with: {(snapshot) in
-            let messageId = snapshot.key
-            self.fetchMessage(messageId: messageId)
-        })
+        if messages.count > 0 {
+            let lastMessageId = messages[messages.count - 1].id
+            let ref = Database.database().reference().child("user-messages").child(uid).child(toId).queryOrderedByKey().queryStarting(atValue: lastMessageId).queryLimited(toLast: 20)
+            ref.observe(.childAdded, with: {(snapshot) in
+                let messageId = snapshot.key
+                self.fetchMessage(messageId: messageId)
+            })
+        } else {
+            let ref = Database.database().reference().child("user-messages").child(uid).child(toId).queryLimited(toLast: 20)
+            ref.observe(.childAdded, with: {(snapshot) in
+                let messageId = snapshot.key
+                self.fetchMessage(messageId: messageId)
+            })
+        }
+        
     }
     
     private func fetchMessage(messageId: String) {
@@ -323,32 +391,24 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
             let message = Message()
             message.setValuesForKeys(dictionary)
             message.id = snapshot.key
-            self.messages.append(message)
-            let lastSectionIndex = self.collectionView!.numberOfSections - 1
-            let lastItemIndex = self.collectionView!.numberOfItems(inSection: lastSectionIndex) - 1
-            if lastItemIndex < 0 {
-                let indexPath = IndexPath(row: 0, section: 0)
-                self.collectionView?.insertItems(at: [indexPath])
-            } else {
-                let indexPath = IndexPath(row: lastItemIndex + 1, section: lastSectionIndex)
-                self.collectionView?.insertItems(at: [indexPath])
+            if !self.messages.contains{ $0.id == message.id } {
+                self.messages.append(message)
+                self.messages.sort(by: {($0.timestamp?.intValue)! < ($1.timestamp?.intValue)!})
+                let itemRow = self.messages.index(of: message)
+                let lastSectionIndex = self.collectionView!.numberOfSections - 1
+                if itemRow == 0 {
+                    let indexPath = IndexPath(row: 0, section: 0)
+                    self.collectionView?.insertItems(at: [indexPath])
+                } else {
+                    let indexPath = IndexPath(row: itemRow!, section: lastSectionIndex)
+                    self.collectionView?.insertItems(at: [indexPath])
+                }
+                self.scrollToLastItem()
             }
-            self.scrollToLastItem()
         })
-    }
-    
-    private func fetchMoreMessage(messageId: String) {
-        let messageRef = Database.database().reference().child("messages").child(messageId)
-        messageRef.observeSingleEvent(of: .value, with: {(snapshot) in
-            
-            guard let dictionary = snapshot.value as? [String: Any] else {return}
-            let message = Message()
-            message.setValuesForKeys(dictionary)
-            message.id = snapshot.key
-            self.messages.insert(message, at: 0)
-            let indexPath = IndexPath(row: 0, section: 0)
-            self.collectionView?.insertItems(at: [indexPath])
-        })
+        guard let uid = Auth.auth().currentUser?.uid else {return}
+        let ref = Database.database().reference().child("last-user-message-read").child(uid)
+        ref.updateChildValues([account!.id!: 0])
     }
     
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
@@ -358,7 +418,6 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     
     override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: cellId, for: indexPath) as! MessageCell
-        
         let message = messages[indexPath.row]
         cell.textView.text = message.message
         
@@ -377,6 +436,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
             
             cell.bubbleRightAnchor?.isActive = true
             cell.bubbleLeftAnchor?.isActive = false
+            
         } else {
             if let profileImageUrul = self.account?.profileImageUrl {
                 cell.bubbleProfile.loadImagesFromCache(urlString: profileImageUrul)
@@ -418,14 +478,20 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
             let timestamp = NSDate().timeIntervalSince1970
             let values = ["message": inputTextField.text!, "toId": toId,
                           "fromId": fromId, "timestamp": timestamp] as [String : Any]
+            self.inputTextField.text = nil
+            let lastRecipientMessageReadRef = Database.database().reference().child("last-user-message-read").child(toId).child(impersonatingUserId)
+            lastRecipientMessageReadRef.runTransactionBlock({(currentCount) -> TransactionResult in
+                if let count = currentCount.value as? Int {
+                    currentCount.value = count + 1
+                }
+                return TransactionResult.success(withValue: currentCount)
+            })
+            
             ref.updateChildValues(values) {(error, ref) in
                 if error != nil {
                     print(error!)
                     return
                 }
-                
-                self.inputTextField.text = nil
-                
                 let userMessageRef = Database.database().reference().child("user-messages").child(fromId).child(toId)
                 let messageId = ref.key
                 userMessageRef.updateChildValues([messageId : self.account!.id!])
@@ -433,23 +499,11 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
                 let lastUserMessageRef = Database.database().reference().child("last-user-message").child(fromId)
                 lastUserMessageRef.updateChildValues([self.account!.id! : [messageId: impersonatingUserId]])
                 
-                let lastUserMessageReadRef = Database.database().reference().child("last-user-message-read").child(fromId)
-                lastUserMessageReadRef.updateChildValues([self.account!.id! : 0])
-                
-                
                 let recipientMessageRef = Database.database().reference().child("user-messages").child(toId).child(fromId)
                 recipientMessageRef.updateChildValues([messageId : impersonatingUserId])
                 
                 let lastRecipientMessageRef = Database.database().reference().child("last-user-message").child(toId)
                 lastRecipientMessageRef.updateChildValues([impersonatingUserId : [messageId: self.account!.id!]])
-                
-                let lastRecipientMessageReadRef = Database.database().reference().child("last-user-message-read").child(toId).child(impersonatingUserId)
-                lastRecipientMessageReadRef.runTransactionBlock({(currentCount) -> TransactionResult in
-                    if let count = currentCount.value as? Int {
-                        currentCount.value = count + 1
-                    }
-                    return TransactionResult.success(withValue: currentCount)
-                })
             }
         }
     }
@@ -526,6 +580,11 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
             let connectionRef1 = Database.database().reference().child("connections").child(account!.representedUserId!)
             connectionRef1.updateChildValues([impersonatingUserId : [uid: account!.id]])
             print("representing/impersonating setup")
+            
+            let readRef = Database.database().reference().child("last-user-message-read").child(uid)
+            readRef.updateChildValues([self.account!.id! : 0])
+            let readRef1 = Database.database().reference().child("last-user-message-read").child(account!.representedUserId!)
+            readRef1.updateChildValues([impersonatingUserId : 0])
         }
     }
     

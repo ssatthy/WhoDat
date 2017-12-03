@@ -13,6 +13,8 @@ class LoginController: UIViewController {
 
     var messageController: MessageController? = nil
     
+    let defaultProfilePicture = UIImage(named: "profilepic")
+    
     let inputsContainerView: UIView = {
         let view = UIView()
         view.backgroundColor = UIColor.white
@@ -24,7 +26,7 @@ class LoginController: UIViewController {
     
     lazy var loginButton: UIButton = {
         let button = UIButton(type: .system)
-        button.backgroundColor = UIColor(r: 80, g: 101, b: 161)
+        button.backgroundColor = UIColor.gray
         button.setTitle("Login", for: .normal)
         button.setTitleColor(UIColor.white, for: .normal)
         button.titleLabel?.font = UIFont.boldSystemFont(ofSize: 16)
@@ -59,7 +61,7 @@ class LoginController: UIViewController {
 
     lazy var profilePictureView: UIImageView = {
         let imageView = UIImageView()
-        imageView.image = UIImage(named: "profilepic")
+        imageView.image = defaultProfilePicture
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.layer.cornerRadius = 75
         imageView.clipsToBounds = true
@@ -70,7 +72,35 @@ class LoginController: UIViewController {
         return imageView
     }()
     
+    lazy var profileRedBorderView: UIView = {
+       let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = UIColor.red
+        view.layer.cornerRadius = 91
+        view.layer.masksToBounds = true
+        return view
+    }()
+    
+    lazy var profileGreenBorderView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = UIColor(r: 0, g: 204, b: 0)
+        view.layer.cornerRadius = 83
+        view.layer.masksToBounds = true
+        return view
+    }()
+    
+    
     @objc func handleLogin() {
+        
+        if phoneField.text == nil || nameField.text == nil || profilePictureView.image!.isEqual(defaultProfilePicture) {
+            let validateAlert = UIAlertController(title: "Invalid Inputs", message: "Profile picture, name and phone are required!", preferredStyle: .alert)
+            let ok = UIAlertAction(title: "Ok", style: .default, handler: nil)
+            validateAlert.addAction(ok)
+            present(validateAlert, animated: true, completion: nil)
+            return
+        }
+        
         guard let phone = phoneField.text else {
                 print("Invalid form inputs!")
                 return
@@ -106,10 +136,12 @@ class LoginController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        view.backgroundColor = UIColor(r: 61, g: 91, b: 151)
+        view.backgroundColor = UIColor(r: 255, g: 255, b: 255)
         self.hideKeyboardWhenTappedAround()
         view.addSubview(inputsContainerView)
         view.addSubview(loginButton)
+        view.addSubview(profileRedBorderView)
+        view.addSubview(profileGreenBorderView)
         view.addSubview(profilePictureView)
         
         setupInputsContainerView()
@@ -118,10 +150,21 @@ class LoginController: UIViewController {
     }
     
     func setupProfilePicture() {
+        
         profilePictureView.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
-        profilePictureView.bottomAnchor.constraint(equalTo: inputsContainerView.topAnchor, constant: -12).isActive = true
+        profilePictureView.bottomAnchor.constraint(equalTo: inputsContainerView.topAnchor, constant: -18).isActive = true
         profilePictureView.widthAnchor.constraint(equalToConstant: 150).isActive = true
         profilePictureView.heightAnchor.constraint(equalToConstant: 150).isActive = true
+        
+        profileRedBorderView.centerXAnchor.constraint(equalTo: profilePictureView.centerXAnchor).isActive = true
+        profileRedBorderView.centerYAnchor.constraint(equalTo: profilePictureView.centerYAnchor).isActive = true
+        profileRedBorderView.widthAnchor.constraint(equalToConstant: 182).isActive = true
+        profileRedBorderView.heightAnchor.constraint(equalToConstant: 182).isActive = true
+        
+        profileGreenBorderView.centerXAnchor.constraint(equalTo: profilePictureView.centerXAnchor).isActive = true
+        profileGreenBorderView.centerYAnchor.constraint(equalTo: profilePictureView.centerYAnchor).isActive = true
+        profileGreenBorderView.widthAnchor.constraint(equalToConstant: 166).isActive = true
+        profileGreenBorderView.heightAnchor.constraint(equalToConstant: 166).isActive = true
         
     }
     

@@ -139,8 +139,13 @@ class AccountCell: UITableViewCell {
         refCaught.observe(.value, with: {(snapshot) in
             print("found")
             print(snapshot)
-            if let _ = snapshot.value as? [String: Int] {
-                self.foundIndicator.isHidden = false
+            if let dictionary = snapshot.value as? [String: Int] {
+                let value = Array(dictionary)[0].value
+                if value == 1 {
+                    self.foundIndicator.isHidden = false
+                } else if value == 0 {
+                    self.foundIndicator.isHidden = true
+                }
             } else {
                 self.foundIndicator.isHidden = true
             }

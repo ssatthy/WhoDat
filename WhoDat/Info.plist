@@ -7,7 +7,7 @@
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<string>com.likethatalsocan.WhoDat</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -31,10 +31,10 @@
 	<string>1</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>To choose a profile picture</string>
 	<key>NSContactsUsageDescription</key>
 	<string>To select a phone number</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>To choose a profile picture</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

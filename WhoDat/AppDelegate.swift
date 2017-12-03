@@ -10,6 +10,7 @@ import UIKit
 import Firebase
 import FirebaseAuth
 import UserNotifications
+import GoogleMobileAds
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
@@ -37,6 +38,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
             UIApplication.shared.registerForRemoteNotifications()
         }
         
+        GADMobileAds.configure(withApplicationID: "ca-app-pub-2292982215135045~5422975080")
+
         return true
     }
 
@@ -47,6 +50,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
         Database.database().reference().child("users").child(uid).child("token").setValue(fcmToken)
     }
     
+    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        if let aps = userInfo["aps"] as? NSDictionary {
+            if let badge = aps["badge"] as? Int {
+                DispatchQueue.main.async {
+                    UIApplication.shared.applicationIconBadgeNumber = badge
+
+                }
+            }
+        }
+    }
     
     func applicationWillResignActive(_ application: UIApplication) {
         // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.

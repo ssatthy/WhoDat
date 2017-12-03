@@ -88,9 +88,9 @@ class AccountViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         dismiss(animated: true, completion: {
             let account = self.accounts[indexPath.row]
+            guard let uid = Auth.auth().currentUser?.uid else {return}
             if self.pretendingUser!.representedUserId == account.id {
-                guard let uid = Auth.auth().currentUser?.uid else {return}
-                
+    
                 if self.pretendingUser!.beenCaught {
                     let refBeenCaught = Database.database().reference().child("users-been-caught").child(uid).child(self.pretendingUser!.id!)
                     refBeenCaught.removeValue()
@@ -100,6 +100,11 @@ class AccountViewController: UITableViewController {
                     refLastMessage.removeValue()
                     let refLastMessage2 = Database.database().reference().child("last-user-message").child(account.id!).child(self.pretendingUser!.impersonatingUserId!)
                     refLastMessage2.removeValue()
+                    let readRef = Database.database().reference().child("last-user-message-read").child(uid).child(self.pretendingUser!.id!)
+                    readRef.removeValue()
+                    let readRef1 = Database.database().reference().child("last-user-message-read").child(self.pretendingUser!.representedUserId!).child(self.pretendingUser!.impersonatingUserId!)
+                    readRef1.removeValue()
+
                     let refConnection = Database.database().reference().child("connections").child(uid)
                     refConnection.updateChildValues([self.pretendingUser!.id! : "none"])
                     let refConnection2 = Database.database().reference().child("connections").child(account.id!)
@@ -125,6 +130,9 @@ class AccountViewController: UITableViewController {
                     refBeenCaught.updateChildValues([self.pretendingUser!.impersonatingUserId! : 1])
                 }
                 
+            } else {
+                let refCaught = Database.database().reference().child("users-caught").child(uid)
+                refCaught.updateChildValues([self.pretendingUser!.id! : 0])
             }
             self.handleCancel()
             
