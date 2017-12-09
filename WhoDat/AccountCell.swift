@@ -134,7 +134,7 @@ class AccountCell: UITableViewCell {
     
     private func setupAttention(account: Account) {
         guard let uid = Auth.auth().currentUser?.uid else {return}
-        let refCaught = Database.database().reference().child("users-caught").child(uid).queryOrderedByKey()
+        let refCaught = Database.database().reference().child(Configuration.environment).child("users-caught").child(uid).queryOrderedByKey()
             .queryEqual(toValue: account.id!)
         refCaught.observe(.value, with: {(snapshot) in
             print("found")
@@ -151,7 +151,7 @@ class AccountCell: UITableViewCell {
             }
         })
         
-        let refBeenCaught = Database.database().reference().child("users-been-caught").child(uid).queryOrderedByKey().queryEqual(toValue: account.id!)
+        let refBeenCaught = Database.database().reference().child(Configuration.environment).child("users-been-caught").child(uid).queryOrderedByKey().queryEqual(toValue: account.id!)
         refBeenCaught.observe(.value, with: {(snapshot) in
             print("caught")
             print(snapshot)
@@ -167,7 +167,7 @@ class AccountCell: UITableViewCell {
     func setupUnread() {
         unread.isHidden = true
         guard let uid = Auth.auth().currentUser?.uid else {return}
-        let ref = Database.database().reference().child("last-user-message-read").child(uid).child(message!.account!.id!)
+        let ref = Database.database().reference().child(Configuration.environment).child("last-user-message-read").child(uid).child(message!.account!.id!)
         ref.observe(.value, with: {(snapshot) in
             print("read observed")
             print(snapshot)

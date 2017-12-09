@@ -60,8 +60,7 @@ extension LoginController: UIImagePickerControllerDelegate, UINavigationControll
             }
             guard let uid = user?.uid else {return}
             
-            let imageName = NSUUID().uuidString
-            let storageRef = Storage.storage().reference().child("profile_pictures").child("\(imageName).jpg")
+            let storageRef = Storage.storage().reference().child(Configuration.environment).child("profile_pictures").child("\(uid).jpg")
             
             if let profileImage = self.profilePictureView.image, let uploadData = UIImageJPEGRepresentation(profileImage, 0.1) {
                 storageRef.putData(uploadData, metadata: nil, completion: {(metadata, error) in
@@ -81,7 +80,7 @@ extension LoginController: UIImagePickerControllerDelegate, UINavigationControll
     }
     
     private func registerAccount(uid: String, values: [String: Any]) {
-        let ref = Database.database().reference()
+        let ref = Database.database().reference().child(Configuration.environment)
         let usersRef = ref.child("users").child(uid)
         
         usersRef.updateChildValues(values, withCompletionBlock:

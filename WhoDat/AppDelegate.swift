@@ -13,7 +13,7 @@ import UserNotifications
 import GoogleMobileAds
 
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate, UNUserNotificationCenterDelegate {
 
     var window: UIWindow?
 
@@ -37,6 +37,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
             UIApplication.shared.registerUserNotificationSettings(notificationSettings)
             UIApplication.shared.registerForRemoteNotifications()
         }
+        let center = UNUserNotificationCenter.current()
+        center.delegate = self
         
         GADMobileAds.configure(withApplicationID: "ca-app-pub-2292982215135045~5422975080")
 
@@ -47,7 +49,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
         print("Received token")
         print("ock: \(fcmToken)  :")
         guard let uid = Auth.auth().currentUser?.uid else {return}
-        Database.database().reference().child("users").child(uid).child("token").setValue(fcmToken)
+        Database.database().reference().child(Configuration.environment).child("users").child(uid).child("token").setValue(fcmToken)
     }
     
     func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
@@ -58,6 +60,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 
                 }
             }
+        }
+    }
+    
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        if notification.request.content.title.hasPrefix("Chat ended") {
+            completionHandler([.alert,.sound])
         }
     }
     

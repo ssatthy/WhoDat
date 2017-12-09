@@ -23,6 +23,7 @@
 		5C48E00D1F94772800CD2702 /* MessageCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C48E00C1F94772800CD2702 /* MessageCell.swift */; };
 		5C62E33A1FB812CB008F7496 /* LocalUserRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C62E3391FB812CB008F7496 /* LocalUserRepository.swift */; };
 		5C8E87981FD3A3F6006EB79A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8E87971FD3A3F6006EB79A /* Assets.xcassets */; };
+		5C8E879C1FDBF1EB006EB79A /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C8E879B1FDBF1EB006EB79A /* Configuration.swift */; };
 		5CBB52001FA04BA800371ACA /* AccountViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CBB51FF1FA04BA800371ACA /* AccountViewController.swift */; };
 		5CF6EF751FCA83BE00819BED /* index.js in Resources */ = {isa = PBXBuildFile; fileRef = 5CF6EF741FCA83BE00819BED /* index.js */; };
 /* End PBXBuildFile section */
@@ -46,6 +47,7 @@
 		5C62E3391FB812CB008F7496 /* LocalUserRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalUserRepository.swift; sourceTree = "<group>"; };
 		5C83947D1FC00D2600C87DC5 /* WhoDat.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WhoDat.entitlements; sourceTree = "<group>"; };
 		5C8E87971FD3A3F6006EB79A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5C8E879B1FDBF1EB006EB79A /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
 		5CADD1251FC8860700126BA9 /* ALGReversedFlowLayout.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ALGReversedFlowLayout.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		5CADD1271FC8890600126BA9 /* ALGReversedFlowLayout.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ALGReversedFlowLayout.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		5CBB51FF1FA04BA800371ACA /* AccountViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountViewController.swift; sourceTree = "<group>"; };
@@ -130,6 +132,7 @@
 			children = (
 				5C48E0031F92F32300CD2702 /* Extensions.swift */,
 				5C62E3391FB812CB008F7496 /* LocalUserRepository.swift */,
+				5C8E879B1FDBF1EB006EB79A /* Configuration.swift */,
 			);
 			name = Helper;
 			sourceTree = "<group>";
@@ -324,6 +327,7 @@
 			files = (
 				5C48E00D1F94772800CD2702 /* MessageCell.swift in Sources */,
 				5C48E0061F93107600CD2702 /* ChatLogController.swift in Sources */,
+				5C8E879C1FDBF1EB006EB79A /* Configuration.swift in Sources */,
 				5C62E33A1FB812CB008F7496 /* LocalUserRepository.swift in Sources */,
 				5C48E00B1F93362500CD2702 /* AccountCell.swift in Sources */,
 				5CBB52001FA04BA800371ACA /* AccountViewController.swift in Sources */,

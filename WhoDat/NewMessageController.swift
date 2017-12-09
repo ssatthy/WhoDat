@@ -33,13 +33,13 @@ class NewMessageController: UITableViewController, CNContactPickerDelegate , Inv
             return
         }
 
-        Database.database().reference().child("connections").child(uid).observe(.childAdded, with:
+        Database.database().reference().child(Configuration.environment).child("connections").child(uid).observe(.childAdded, with:
             {(snapshot) in
                 let userId = snapshot.key
                 let representedValue = snapshot.value
                 
                 // intentionally not using cache here, because have ample time here to load user data and help to refresh user details
-                let userRef = Database.database().reference().child("users").child(userId)
+                let userRef = Database.database().reference().child(Configuration.environment).child("users").child(userId)
                 userRef.observeSingleEvent(of: .value, with: {(snapshot) in
                     if let dictionary = snapshot.value as? [String: AnyObject] {
                         let account = Account()
@@ -128,15 +128,15 @@ class NewMessageController: UITableViewController, CNContactPickerDelegate , Inv
             return
         }
         let phone  = (contactProperty.value as? CNPhoneNumber)?.value(forKey: "digits")
-        let userRef = Database.database().reference().child("users").queryOrdered(byChild: "phone").queryEqual(toValue: phone)
+        let userRef = Database.database().reference().child(Configuration.environment).child("users").queryOrdered(byChild: "phone").queryEqual(toValue: phone)
         userRef.observeSingleEvent(of: .value, with: {(snapshot) in
             print("check if phone exists")
             print(snapshot)
             if let dictionary = snapshot.value as? [String: AnyObject] {
                 let userId = Array(dictionary)[0].key
-                let connectionRef = Database.database().reference().child("connections").child(uid)
+                let connectionRef = Database.database().reference().child(Configuration.environment).child("connections").child(uid)
                 connectionRef.updateChildValues([userId : "none"])
-                let connectionOtherRef = Database.database().reference().child("connections").child(userId)
+                let connectionOtherRef = Database.database().reference().child(Configuration.environment).child("connections").child(userId)
                 connectionOtherRef.updateChildValues([uid : "none"])
             } else {
                 print(contactProperty.contact.givenName)

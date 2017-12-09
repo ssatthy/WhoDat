@@ -65,19 +65,20 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
     let group = DispatchGroup()
     
     func observeAddedMessages() {
-        
+        print("observe added msg")
         guard let uid = Auth.auth().currentUser?.uid else {
             return
         }
-        let ref = Database.database().reference().child("last-user-message").child(uid)
+        let ref = Database.database().reference().child(Configuration.environment).child("last-user-message").child(uid)
         ref.observe(.childAdded, with: {(snapshot) in
             self.group.enter()
+            print("enter")
             let pretendingUserId = snapshot.key
             let valueDic = snapshot.value as! [String: String]
             let messageMap = Array(valueDic)[0]
             let messageId = messageMap.key
             let impersonatingUserId = messageMap.value
-            let messageRef = Database.database().reference().child("messages").child(messageId)
+            let messageRef = Database.database().reference().child(Configuration.environment).child("messages").child(messageId)
             messageRef.observeSingleEvent(of: .value, with: {(snapshot) in
                 if let dictionary = snapshot.value as? [String: Any] {
                     let message = Message()
@@ -89,8 +90,9 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
                         message.account = account
                         self.setupMessage(message: message)
                         self.group.leave()
+                        print("leave")
                     } else {
-                        Database.database().reference().child("users").child(pretendingUserId).observeSingleEvent(of: .value, with: {(snapshot) in
+                        Database.database().reference().child(Configuration.environment).child("users").child(pretendingUserId).observeSingleEvent(of: .value, with: {(snapshot) in
                             if let dictionary = snapshot.value as? [String: AnyObject] {
                                 let account = Account()
                                 account.id = snapshot.key
@@ -101,6 +103,7 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
                                 message.account = account
                                 self.setupMessage(message: message)
                                 self.group.leave()
+                                print("leave")
                             }
                         })
                     }
@@ -114,14 +117,14 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
         guard let uid = Auth.auth().currentUser?.uid else {
             return
         }
-        let ref = Database.database().reference().child("last-user-message").child(uid)
+        let ref = Database.database().reference().child(Configuration.environment).child("last-user-message").child(uid)
         ref.observe(.childChanged, with: {(snapshot) in
             let pretendingUserId = snapshot.key
             let valueDic = snapshot.value as! [String: String]
             let messageMap = Array(valueDic)[0]
             let messageId = messageMap.key
             let impersonatingUserId = messageMap.value
-            let messageRef = Database.database().reference().child("messages").child(messageId)
+            let messageRef = Database.database().reference().child(Configuration.environment).child("messages").child(messageId)
             messageRef.observeSingleEvent(of: .value, with: {(snapshot) in
                 if let dictionary = snapshot.value as? [String: Any] {
                     let message = Message()
@@ -133,7 +136,7 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
                         message.account = account
                         self.setupMessage(message: message)
                     } else {
-                        Database.database().reference().child("users").child(pretendingUserId).observeSingleEvent(of: .value, with: {(snapshot) in
+                        Database.database().reference().child(Configuration.environment).child("users").child(pretendingUserId).observeSingleEvent(of: .value, with: {(snapshot) in
                             if let dictionary = snapshot.value as? [String: AnyObject] {
                                 let account = Account()
                                 account.id = snapshot.key
@@ -155,7 +158,7 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
         guard let uid = Auth.auth().currentUser?.uid else {
             return
         }
-        let ref = Database.database().reference().child("last-user-message").child(uid)
+        let ref = Database.database().reference().child(Configuration.environment).child("last-user-message").child(uid)
         ref.observe(.childRemoved, with: {(snapshot) in
             let accountId = snapshot.key
             let valueDic = snapshot.value as! [String: String]
@@ -170,7 +173,7 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
     }
     
     func setupMessage(message: Message) {
-        
+        print("done")
         message.account?.representedUserId = message.representedUserId()!
         messages = messages.filter{ $0.account?.id != message.account?.id! }
         self.messages.append(message)
@@ -230,6 +233,7 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
         if((Auth.auth().currentUser) == nil) {
             perform(#selector(handleLogout), with: nil, afterDelay: 0)
         } else {
+            print("fetch user details")
             fetchUserAndSetNavBar()
         }
 
@@ -244,7 +248,7 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
         if let account = LocalUserRepository.shared().loadUserFromCache(uid: uid) {
             self.setNavBar(account: account)
         } else {
-            Database.database().reference().child("users").child(uid).observeSingleEvent(of: .value, with:
+            Database.database().reference().child(Configuration.environment).child("users").child(uid).observeSingleEvent(of: .value, with:
                 {(snapshot) in
                     if let dictionary = snapshot.value as? [String: AnyObject] {
                         print(dictionary)
