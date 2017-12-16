@@ -35,6 +35,7 @@
 		5C02CFBF1F91BC7900BD23C4 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		5C02CFC11F91BC7900BD23C4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		5C02CFC81F91C06F00BD23C4 /* LoginController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LoginController.swift; sourceTree = "<group>"; };
+		5C1524D81FE4C9A900E3612B /* UICheckbox_Swift.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = UICheckbox_Swift.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C29D8ED1FC94A8B0053568F /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		5C48DFFB1F92260C00CD2702 /* NewMessageController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NewMessageController.swift; sourceTree = "<group>"; };
 		5C48DFFE1F922C5100CD2702 /* Account.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
@@ -158,6 +159,7 @@
 		F01E5737B9ADA7270E291F20 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				5C1524D81FE4C9A900E3612B /* UICheckbox_Swift.framework */,
 				5CADD1271FC8890600126BA9 /* ALGReversedFlowLayout.framework */,
 				5CADD1251FC8860700126BA9 /* ALGReversedFlowLayout.framework */,
 				684AF82A0117A3EA6984AADA /* Pods_WhoDat.framework */,

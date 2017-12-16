@@ -47,6 +47,7 @@ extension UIViewController {
     func setNavBar(account: Account) {
         
         let titleBar = UIView()
+        titleBar.isUserInteractionEnabled = true
         titleBar.frame = CGRect(x: 0, y: 0, width: 100, height: 40)
         
         let containerView = UIView()
@@ -74,8 +75,6 @@ extension UIViewController {
         containerView.addSubview(beenCaughtIndicator)
         
         let profileImageView = UIImageView()
-        containerView.addSubview(profileImageView)
-        
         profileImageView.contentMode = .scaleAspectFill
         profileImageView.layer.cornerRadius = 20
         profileImageView.clipsToBounds = true
@@ -85,7 +84,7 @@ extension UIViewController {
         } else {
             profileImageView.image = UIImage(named: "profilepic")
         }
-        
+        containerView.addSubview(profileImageView)
         profileImageView.leftAnchor.constraint(equalTo: containerView.leftAnchor).isActive = true
         profileImageView.centerYAnchor.constraint(equalTo: containerView.centerYAnchor).isActive = true
         profileImageView.heightAnchor.constraint(equalToConstant: 40).isActive = true

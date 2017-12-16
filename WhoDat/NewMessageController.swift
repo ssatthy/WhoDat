@@ -28,38 +28,52 @@ class NewMessageController: UITableViewController, CNContactPickerDelegate , Inv
         fetchUsers()
     }
 
+    var blockedUserIds = Array<String>()
+    
+    func fetchAndFilterUsers() {
+        guard let uid = Auth.auth().currentUser?.uid else {return}
+        
+        Database.database().reference().child(Configuration.environment).child("user-blocked").child(uid).observeSingleEvent(of: .value, with: {(snapshot) in
+            if let blockedUsers = snapshot.value as? [String: String] {
+                self.blockedUserIds = Array(blockedUsers.keys)
+            }
+            self.fetchUsers()
+        })
+    }
+    
     func fetchUsers() {
         guard let uid = Auth.auth().currentUser?.uid else {
             return
         }
 
-        Database.database().reference().child(Configuration.environment).child("connections").child(uid).observe(.childAdded, with:
+        Database.database().reference().child(Configuration.environment).child("connections").child(uid).observeSingleEvent(of: .value, with:
             {(snapshot) in
-                let userId = snapshot.key
-                let representedValue = snapshot.value
-                
-                // intentionally not using cache here, because have ample time here to load user data and help to refresh user details
-                let userRef = Database.database().reference().child(Configuration.environment).child("users").child(userId)
-                userRef.observeSingleEvent(of: .value, with: {(snapshot) in
-                    if let dictionary = snapshot.value as? [String: AnyObject] {
-                        let account = Account()
-                        account.id = snapshot.key
-                        account.setValuesForKeys(dictionary)
-                        LocalUserRepository.shared().setObject(account)
-                        
-                        if let dictionary = representedValue as? [String: String] {
-                            let map = Array(dictionary)[0]
-                            account.representedUserId = map.key
-                            account.impersonatingUserId = map.value
-                        }
-                        
-                        self.accounts.append(account)
-                        DispatchQueue.main.async {
-                            self.tableView.reloadData()
-                        }
+                if let userDictionary = snapshot.value as? [String: Any] {
+                    for user in userDictionary {
+                        // intentionally not using cache here, because have ample time here to load user data and help to refresh user details
+                        let userRef = Database.database().reference().child(Configuration.environment).child("users").child(user.key)
+                        userRef.observeSingleEvent(of: .value, with: {(snapshot) in
+                            if let dictionary = snapshot.value as? [String: AnyObject] {
+                                let account = Account()
+                                account.id = snapshot.key
+                                account.setValuesForKeys(dictionary)
+                                LocalUserRepository.shared().setObject(account)
+                                
+                                if let value = user.value as? [String: String] {
+                                    let assignedDictionary = Array(value)[0]
+                                    account.representedUserId = assignedDictionary.key
+                                    account.impersonatingUserId = assignedDictionary.value
+                                }
+                                
+                                self.accounts.append(account)
+                                DispatchQueue.main.async {
+                                    self.tableView.reloadData()
+                                }
+                            }
+                            
+                        })
                     }
-                
-                })
+                }
                 
         })
     }
@@ -134,16 +148,27 @@ class NewMessageController: UITableViewController, CNContactPickerDelegate , Inv
             print(snapshot)
             if let dictionary = snapshot.value as? [String: AnyObject] {
                 let userId = Array(dictionary)[0].key
-                let connectionRef = Database.database().reference().child(Configuration.environment).child("connections").child(uid)
-                connectionRef.updateChildValues([userId : "none"])
-                let connectionOtherRef = Database.database().reference().child(Configuration.environment).child("connections").child(userId)
-                connectionOtherRef.updateChildValues([uid : "none"])
+                
+                let blockRef = Database.database().reference().child(Configuration.environment).child("user-blocked").child(userId).child(uid)
+                blockRef.observeSingleEvent(of: .value, with: {(snapshot) in
+                    if snapshot.value != nil {
+                        let alert = UIAlertController(title: "You Are Blocked", message: "Sorry you cannot add this user as you were blocked by this user.", preferredStyle: .alert)
+                        alert.addAction(UIAlertAction(title: "Ok", style: .default, handler: nil))
+                    } else {
+                        let connectionRef = Database.database().reference().child(Configuration.environment).child("connections").child(uid)
+                        connectionRef.updateChildValues([userId : "none"])
+                        let connectionOtherRef = Database.database().reference().child(Configuration.environment).child("connections").child(userId)
+                        connectionOtherRef.updateChildValues([uid : "none"])
+                    }
+                })
+                
+                
             } else {
                 print(contactProperty.contact.givenName)
                 let alert = UIAlertController(title: "Invite \(contactProperty.contact.givenName)", message: "You friend is not on WhoDat. Would you like to invite?", preferredStyle: .alert)
                 alert.addAction(UIAlertAction(title: "Cancel", style: .default, handler: nil))
                 alert.addAction(UIAlertAction(title: "Invite", style: .default, handler: {(_) in
-                    let objectsToShare = ["Hey \(contactProperty.contact.givenName)!, just try this one out!"]
+                    let objectsToShare = ["Hey there!, just try this one out! https://itunes.apple.com/us/app/whodat-anonymous-until-not/id1323692195?ls=1&mt=8"]
                     let activityController = UIActivityViewController(
                         activityItems: objectsToShare,
                         applicationActivities: nil)

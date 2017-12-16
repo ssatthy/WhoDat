@@ -99,13 +99,13 @@ class AccountViewController: UITableViewController {
                             ref1.updateChildValues([self.pretendingUser!.id! : "01"])
                             let ref2 = Database.database().reference().child(Configuration.environment).child("chat-ended").child(self.pretendingUser!.representedUserId!)
                             ref2.updateChildValues([self.pretendingUser!.impersonatingUserId! : "10"])
-                            self.endChat()
+                            self.endChat(account: self.pretendingUser!)
                         } else if value == 1 {
                             let ref1 = Database.database().reference().child(Configuration.environment).child("chat-ended").child(uid)
                             ref1.updateChildValues([self.pretendingUser!.id! : "11"])
                             let ref2 = Database.database().reference().child(Configuration.environment).child("chat-ended").child(self.pretendingUser!.representedUserId!)
                             ref2.updateChildValues([self.pretendingUser!.impersonatingUserId! : "11"])
-                            self.endChat()
+                            self.endChat(account: self.pretendingUser!)
                         }
                     } else {
                         let refCaught = Database.database().reference().child(Configuration.environment).child("users-caught").child(uid)
@@ -124,13 +124,13 @@ class AccountViewController: UITableViewController {
                             ref1.updateChildValues([self.pretendingUser!.id! : "00"])
                             let ref2 = Database.database().reference().child(Configuration.environment).child("chat-ended").child(self.pretendingUser!.representedUserId!)
                             ref2.updateChildValues([self.pretendingUser!.impersonatingUserId! : "00"])
-                            self.endChat()
+                            self.endChat(account: self.pretendingUser!)
                         } else if value == 1 {
                             let ref1 = Database.database().reference().child(Configuration.environment).child("chat-ended").child(uid)
                             ref1.updateChildValues([self.pretendingUser!.id! : "10"])
                             let ref2 = Database.database().reference().child(Configuration.environment).child("chat-ended").child(self.pretendingUser!.representedUserId!)
                             ref2.updateChildValues([self.pretendingUser!.impersonatingUserId! : "01"])
-                            self.endChat()
+                            self.endChat(account: self.pretendingUser!)
                         }
                     } else {
                         let refCaught = Database.database().reference().child(Configuration.environment).child("users-caught").child(uid)
@@ -144,26 +144,26 @@ class AccountViewController: UITableViewController {
         })
     }
     
-    func endChat() {
+    func endChat(account: Account) {
         guard let uid = Auth.auth().currentUser?.uid else {return}
-        let refBeenCaught = Database.database().reference().child(Configuration.environment).child("users-been-caught").child(uid).child(self.pretendingUser!.id!)
+        let refBeenCaught = Database.database().reference().child(Configuration.environment).child("users-been-caught").child(uid).child(account.id!)
         refBeenCaught.removeValue()
-        let refCaught = Database.database().reference().child(Configuration.environment).child("users-caught").child(self.pretendingUser!.representedUserId!).child(self.pretendingUser!.impersonatingUserId!)
+        let refCaught = Database.database().reference().child(Configuration.environment).child("users-caught").child(account.representedUserId!).child(account.impersonatingUserId!)
         refCaught.removeValue()
-        let refLastMessage = Database.database().reference().child(Configuration.environment).child("last-user-message").child(uid).child(self.pretendingUser!.id!)
+        let refLastMessage = Database.database().reference().child(Configuration.environment).child("last-user-message").child(uid).child(account.id!)
         refLastMessage.removeValue()
-        let refLastMessage2 = Database.database().reference().child(Configuration.environment).child("last-user-message").child(self.pretendingUser!.representedUserId!).child(self.pretendingUser!.impersonatingUserId!)
+        let refLastMessage2 = Database.database().reference().child(Configuration.environment).child("last-user-message").child(account.representedUserId!).child(account.impersonatingUserId!)
         refLastMessage2.removeValue()
-        let readRef = Database.database().reference().child(Configuration.environment).child("last-user-message-read").child(uid).child(self.pretendingUser!.id!)
+        let readRef = Database.database().reference().child(Configuration.environment).child("last-user-message-read").child(uid).child(account.id!)
         readRef.removeValue()
-        let readRef1 = Database.database().reference().child(Configuration.environment).child("last-user-message-read").child(self.pretendingUser!.representedUserId!).child(self.pretendingUser!.impersonatingUserId!)
+        let readRef1 = Database.database().reference().child(Configuration.environment).child("last-user-message-read").child(account.representedUserId!).child(account.impersonatingUserId!)
         readRef1.removeValue()
         
         let refConnection = Database.database().reference().child(Configuration.environment).child("connections").child(uid)
-        refConnection.updateChildValues([self.pretendingUser!.id! : "none"])
-        let refConnection2 = Database.database().reference().child(Configuration.environment).child("connections").child(self.pretendingUser!.representedUserId!)
-        refConnection2.updateChildValues([self.pretendingUser!.impersonatingUserId! : "none"])
-        let refUserMessage = Database.database().reference().child(Configuration.environment).child("user-messages").child(uid).child(self.pretendingUser!.representedUserId!)
+        refConnection.updateChildValues([account.id! : "none"])
+        let refConnection2 = Database.database().reference().child(Configuration.environment).child("connections").child(account.representedUserId!)
+        refConnection2.updateChildValues([account.impersonatingUserId! : "none"])
+        let refUserMessage = Database.database().reference().child(Configuration.environment).child("user-messages").child(uid).child(account.representedUserId!)
         refUserMessage.observeSingleEvent(of: .value, with: {(snapshot) in
             if let dictionary = snapshot.value as? [String: String] {
                 for map in dictionary {
@@ -175,7 +175,7 @@ class AccountViewController: UITableViewController {
             snapshot.ref.removeValue()
         })
         
-        let refUserMessage2 = Database.database().reference().child(Configuration.environment).child("user-messages").child(self.pretendingUser!.representedUserId!).child(uid)
+        let refUserMessage2 = Database.database().reference().child(Configuration.environment).child("user-messages").child(account.representedUserId!).child(uid)
         refUserMessage2.removeValue()
     }
     

@@ -34,6 +34,7 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
         let request = GADRequest()
         request.testDevices = [kGADSimulatorID]
         bannerView.load(request)
+        
     }
     
     lazy var adContainerView: UIView = {
@@ -59,7 +60,6 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
     override var canBecomeFirstResponder: Bool {
         return true
     }
-
     
     let operations = OperationQueue()
     let group = DispatchGroup()
@@ -164,11 +164,15 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
             let valueDic = snapshot.value as! [String: String]
             let messageMap = Array(valueDic)[0]
             let messageId = messageMap.key
-            self.messages = self.messages.filter{ $0.id != messageId }
-            self.chatLogControllers[accountId] = nil
             DispatchQueue.main.async {
                 self.tableView.reloadData()
             }
+            let delay = Int(2 * Double(1000))
+            DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(delay), execute: {
+                self.messages = self.messages.filter{ $0.id != messageId }
+                self.chatLogControllers[accountId] = nil
+                self.tableView.reloadData()
+            })
         })
     }
     

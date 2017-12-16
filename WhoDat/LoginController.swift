@@ -53,7 +53,7 @@ class LoginController: UIViewController {
     
     let phoneField: UITextField = {
         let email = UITextField()
-        email.placeholder = "Phone"
+        email.placeholder = "Phone: +65 1234 5678"
         email.translatesAutoresizingMaskIntoConstraints = false
         email.keyboardType = UIKeyboardType.phonePad
         return email
@@ -90,7 +90,23 @@ class LoginController: UIViewController {
         return view
     }()
     
+    lazy var terms: UILabel = {
+        let label = UILabel()
+        label.text = "Terms & Conditions."
+        label.textColor = UIColor.lightGray
+        label.font = label.font.withSize(10)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(goToTerms)))
+        label.isUserInteractionEnabled = true
+        return label
+    }()
     
+    
+    @objc func goToTerms() {
+        UIApplication.shared.open(URL(string: "http://www.likethatalsocan.com/end-user-license-agreement/")!, options: [:], completionHandler: nil)
+        
+    }
+
     @objc func handleLogin() {
         
         if phoneField.text == nil || nameField.text == nil || profilePictureView.image!.isEqual(defaultProfilePicture) {
@@ -143,6 +159,7 @@ class LoginController: UIViewController {
         view.addSubview(profileRedBorderView)
         view.addSubview(profileGreenBorderView)
         view.addSubview(profilePictureView)
+        view.addSubview(terms)
         
         setupInputsContainerView()
         setupProfilePicture()
@@ -194,8 +211,13 @@ class LoginController: UIViewController {
         phoneField.widthAnchor.constraint(equalTo: inputsContainerView.widthAnchor).isActive = true
         phoneField.heightAnchor.constraint(equalTo: inputsContainerView.heightAnchor, multiplier: 1/2).isActive = true
         
+        terms.leftAnchor.constraint(equalTo: inputsContainerView.leftAnchor, constant: 12).isActive = true
+        terms.topAnchor.constraint(equalTo: inputsContainerView.bottomAnchor).isActive = true
+        terms.widthAnchor.constraint(equalTo: inputsContainerView.widthAnchor).isActive = true
+        terms.heightAnchor.constraint(equalToConstant: 12).isActive = true
+        
         loginButton.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
-        loginButton.topAnchor.constraint(equalTo: inputsContainerView.bottomAnchor, constant: 12).isActive = true
+        loginButton.topAnchor.constraint(equalTo: terms.bottomAnchor, constant: 4).isActive = true
         loginButton.widthAnchor.constraint(equalTo: inputsContainerView.widthAnchor).isActive = true
         loginButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
     }

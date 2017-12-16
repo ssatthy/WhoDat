@@ -48,6 +48,59 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         //observeUserMessages()
         observeAlert()
         interstitial = createAndLoadInterstitial()
+        
+    }
+    
+    @objc func showReportOptions()  {
+        print("show options")
+        let alert = UIAlertController(title: "Report This User", message: "If you find this user abusive or his/her messages are objectionable, You can either block or report it.", preferredStyle: .actionSheet)
+        alert.addAction(UIAlertAction(title: "Report", style: .default, handler: { _ in
+            self.reportUser()
+        }))
+        alert.addAction(UIAlertAction(title: "Block", style: .default, handler: { _ in
+            self.blockUser()
+        }))
+        alert.addAction(UIAlertAction(title: "Cancel", style: .default, handler: nil))
+        self.present(alert, animated: true, completion: nil)
+    }
+    
+    func reportUser() {
+        let alert = UIAlertController(title: "Report This User", message: "Tell us little bit about the experience with user.", preferredStyle: .alert)
+        alert.addTextField { (textField) in
+                textField.placeholder = "Enter here..."
+        }
+        alert.addAction(UIAlertAction(title: "Cancel", style: .default, handler: nil))
+        alert.addAction(UIAlertAction(title: "Report", style: .default, handler: { _ in
+            
+            if let textField = alert.textFields?[0], let text = textField.text {
+                guard let uid = Auth.auth().currentUser?.uid else {return}
+                let ref = Database.database().reference().child(Configuration.environment).child("user-report").child(uid)
+                let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .long, timeStyle: .long)
+                ref.updateChildValues([ self.account!.representedUserId! + timestamp : text])
+            }
+        }))
+        
+        self.present(alert, animated: true, completion: nil)
+    }
+    
+    func blockUser() {
+        let alert = UIAlertController(title: "Block This User", message: "You both cannot send or receive message if you do so.", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Cancel", style: .default, handler: nil))
+        alert.addAction(UIAlertAction(title: "Block", style: .destructive, handler: { _ in
+            guard let uid = Auth.auth().currentUser?.uid else {return}
+            
+            AccountViewController().endChat(account: self.account!)
+            
+            let ref = Database.database().reference().child(Configuration.environment).child("user-blocked").child(uid)
+            let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .long, timeStyle: .long)
+            ref.updateChildValues([ self.account!.representedUserId! : timestamp])
+            
+            let ref1 = Database.database().reference().child(Configuration.environment).child("user-blocked").child(self.account!.representedUserId!)
+            ref1.updateChildValues([ uid : "reverse block"])
+            
+        }))
+        
+        self.present(alert, animated: true, completion: nil)
     }
     
     func createAndLoadInterstitial() -> GADInterstitial {
@@ -450,6 +503,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
             
             cell.bubbleRightAnchor?.isActive = false
             cell.bubbleLeftAnchor?.isActive = true
+            cell.contentView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(showReportOptions)))
         }
     }
     
@@ -550,17 +604,19 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     func findAImpersonation() {
         print("Finding a impersonating...")
         
-        let ref = Database.database().reference().child(Configuration.environment).child("connections").child(account!.representedUserId!)
+        let ref = Database.database().reference().child(Configuration.environment).child("connections").child(self.account!.representedUserId!)
             .queryOrderedByValue().queryEqual(toValue: "none")
-        ref.observe(.childAdded, with: {(snapshot) in
-            self.group.enter()
-            self.unRepresentingUserIds.append(snapshot.key)
-            if self.unRepresentingUserIds.count == 1 {
-                self.group.notify(queue: .main, execute: {
-                    self.updateImpersonation()
-                })
+        ref.observeSingleEvent(of: .value, with: {(snapshot) in
+            if let value = snapshot.value as? [String: String] {
+                self.group.enter()
+                self.unRepresentingUserIds.append(Array(value)[0].key)
+                if self.unRepresentingUserIds.count == 1 {
+                    self.group.notify(queue: .main, execute: {
+                        self.updateImpersonation()
+                    })
+                }
+                self.group.leave()
             }
-            self.group.leave()
         })
     }
     
