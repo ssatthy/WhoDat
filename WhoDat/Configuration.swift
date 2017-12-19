@@ -9,5 +9,9 @@
 import Foundation
 
 class Configuration {
-    static let environment = "production"
+    static let environment = Environment.production.rawValue
+}
+
+enum Environment : String {
+    case production, development
 }

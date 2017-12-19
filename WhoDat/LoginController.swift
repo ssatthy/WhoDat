@@ -26,12 +26,12 @@ class LoginController: UIViewController {
     
     lazy var loginButton: UIButton = {
         let button = UIButton(type: .system)
-        button.backgroundColor = UIColor.gray
+        button.backgroundColor = UIColor.lightGray
         button.setTitle("Login", for: .normal)
         button.setTitleColor(UIColor.white, for: .normal)
         button.titleLabel?.font = UIFont.boldSystemFont(ofSize: 16)
         button.translatesAutoresizingMaskIntoConstraints = false
-        
+        button.isUserInteractionEnabled = false
         button.addTarget(self, action: #selector(handleLogin), for: .touchUpInside)
         
         return button
@@ -92,15 +92,38 @@ class LoginController: UIViewController {
     
     lazy var terms: UILabel = {
         let label = UILabel()
-        label.text = "Terms & Conditions."
-        label.textColor = UIColor.lightGray
-        label.font = label.font.withSize(10)
+        label.text = "I accept the terms & conditions."
+        label.textColor = UIColor.gray
+        label.font = label.font.withSize(12)
         label.translatesAutoresizingMaskIntoConstraints = false
         label.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(goToTerms)))
         label.isUserInteractionEnabled = true
         return label
     }()
     
+    let checkbox: Checkbox = {
+       let checkbox = Checkbox()
+        checkbox.checkedBorderColor = .gray
+        checkbox.uncheckedBorderColor = .gray
+        checkbox.borderStyle = .circle
+        checkbox.checkmarkColor = .gray
+        checkbox.checkmarkStyle = .tick
+        checkbox.useHapticFeedback = true
+        checkbox.addTarget(self, action: #selector(checkboxValueChanged(sender:)), for: .valueChanged)
+        checkbox.translatesAutoresizingMaskIntoConstraints = false
+        return checkbox
+    }()
+    
+    
+    @objc func checkboxValueChanged(sender: Checkbox) {
+        if sender.isChecked {
+            loginButton.backgroundColor = .gray
+            loginButton.isUserInteractionEnabled = true
+        } else {
+            loginButton.isUserInteractionEnabled = false
+            loginButton.backgroundColor = .lightGray
+        }
+    }
     
     @objc func goToTerms() {
         UIApplication.shared.open(URL(string: "http://www.likethatalsocan.com/end-user-license-agreement/")!, options: [:], completionHandler: nil)
@@ -160,6 +183,7 @@ class LoginController: UIViewController {
         view.addSubview(profileGreenBorderView)
         view.addSubview(profilePictureView)
         view.addSubview(terms)
+        view.addSubview(checkbox)
         
         setupInputsContainerView()
         setupProfilePicture()
@@ -211,13 +235,18 @@ class LoginController: UIViewController {
         phoneField.widthAnchor.constraint(equalTo: inputsContainerView.widthAnchor).isActive = true
         phoneField.heightAnchor.constraint(equalTo: inputsContainerView.heightAnchor, multiplier: 1/2).isActive = true
         
-        terms.leftAnchor.constraint(equalTo: inputsContainerView.leftAnchor, constant: 12).isActive = true
-        terms.topAnchor.constraint(equalTo: inputsContainerView.bottomAnchor).isActive = true
+        checkbox.leftAnchor.constraint(equalTo: inputsContainerView.leftAnchor, constant: 12).isActive = true
+        checkbox.topAnchor.constraint(equalTo: inputsContainerView.bottomAnchor, constant: 5).isActive = true
+        checkbox.widthAnchor.constraint(equalToConstant: 20).isActive = true
+        checkbox.heightAnchor.constraint(equalToConstant: 20).isActive = true
+        
+        terms.leftAnchor.constraint(equalTo: checkbox.rightAnchor, constant: 12).isActive = true
+        terms.topAnchor.constraint(equalTo: inputsContainerView.bottomAnchor, constant: 5).isActive = true
         terms.widthAnchor.constraint(equalTo: inputsContainerView.widthAnchor).isActive = true
-        terms.heightAnchor.constraint(equalToConstant: 12).isActive = true
+        terms.heightAnchor.constraint(equalToConstant: 20).isActive = true
         
         loginButton.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
-        loginButton.topAnchor.constraint(equalTo: terms.bottomAnchor, constant: 4).isActive = true
+        loginButton.topAnchor.constraint(equalTo: terms.bottomAnchor, constant: 15).isActive = true
         loginButton.widthAnchor.constraint(equalTo: inputsContainerView.widthAnchor).isActive = true
         loginButton.heightAnchor.constraint(equalToConstant: 50).isActive = true
     }

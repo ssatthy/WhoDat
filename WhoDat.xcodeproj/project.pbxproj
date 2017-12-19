@@ -25,6 +25,7 @@
 		5C8E87981FD3A3F6006EB79A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8E87971FD3A3F6006EB79A /* Assets.xcassets */; };
 		5C8E879C1FDBF1EB006EB79A /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C8E879B1FDBF1EB006EB79A /* Configuration.swift */; };
 		5CBB52001FA04BA800371ACA /* AccountViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CBB51FF1FA04BA800371ACA /* AccountViewController.swift */; };
+		5CC74D1B1FE7E6150002F224 /* Checkbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CC74D1A1FE7E6150002F224 /* Checkbox.swift */; };
 		5CF6EF751FCA83BE00819BED /* index.js in Resources */ = {isa = PBXBuildFile; fileRef = 5CF6EF741FCA83BE00819BED /* index.js */; };
 /* End PBXBuildFile section */
 
@@ -52,6 +53,7 @@
 		5CADD1251FC8860700126BA9 /* ALGReversedFlowLayout.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ALGReversedFlowLayout.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		5CADD1271FC8890600126BA9 /* ALGReversedFlowLayout.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ALGReversedFlowLayout.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		5CBB51FF1FA04BA800371ACA /* AccountViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountViewController.swift; sourceTree = "<group>"; };
+		5CC74D1A1FE7E6150002F224 /* Checkbox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Checkbox.swift; sourceTree = "<group>"; };
 		5CF6EF741FCA83BE00819BED /* index.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; name = index.js; path = functions/index.js; sourceTree = SOURCE_ROOT; };
 		684AF82A0117A3EA6984AADA /* Pods_WhoDat.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_WhoDat.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		9FCE1432D3296234FBA9ADAD /* Pods-WhoDat.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WhoDat.debug.xcconfig"; path = "Pods/Target Support Files/Pods-WhoDat/Pods-WhoDat.debug.xcconfig"; sourceTree = "<group>"; };
@@ -141,6 +143,7 @@
 		5C48E0091F93361200CD2702 /* View */ = {
 			isa = PBXGroup;
 			children = (
+				5CC74D1A1FE7E6150002F224 /* Checkbox.swift */,
 				5C48E00A1F93362500CD2702 /* AccountCell.swift */,
 				5C48E00C1F94772800CD2702 /* MessageCell.swift */,
 			);
@@ -341,6 +344,7 @@
 				5C48DFFF1F922C5100CD2702 /* Account.swift in Sources */,
 				5C02CFB61F91BC7900BD23C4 /* AppDelegate.swift in Sources */,
 				5C48E0041F92F32300CD2702 /* Extensions.swift in Sources */,
+				5CC74D1B1FE7E6150002F224 /* Checkbox.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
