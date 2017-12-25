@@ -47,7 +47,6 @@ extension UIViewController {
     func setNavBar(account: Account) {
         
         let titleBar = UIView()
-        titleBar.isUserInteractionEnabled = true
         titleBar.frame = CGRect(x: 0, y: 0, width: 100, height: 40)
         
         let containerView = UIView()
@@ -56,23 +55,6 @@ extension UIViewController {
         containerView.translatesAutoresizingMaskIntoConstraints = false
         containerView.centerXAnchor.constraint(equalTo: titleBar.centerXAnchor).isActive = true
         containerView.centerYAnchor.constraint(equalTo: titleBar.centerYAnchor).isActive = true
-        
-        let foundIndicator = UIView()
-        foundIndicator.translatesAutoresizingMaskIntoConstraints = false
-        foundIndicator.layer.cornerRadius = 22
-        foundIndicator.layer.masksToBounds = true
-        foundIndicator.backgroundColor = UIColor(r: 0, g: 204, b: 0)
-        foundIndicator.tag = 111
-        
-        let beenCaughtIndicator = UIView()
-        beenCaughtIndicator.translatesAutoresizingMaskIntoConstraints = false
-        beenCaughtIndicator.layer.cornerRadius = 22
-        beenCaughtIndicator.layer.masksToBounds = true
-        beenCaughtIndicator.backgroundColor = UIColor.red
-        beenCaughtIndicator.tag = 222
-        
-        containerView.addSubview(foundIndicator)
-        containerView.addSubview(beenCaughtIndicator)
         
         let profileImageView = UIImageView()
         profileImageView.contentMode = .scaleAspectFill
@@ -89,17 +71,6 @@ extension UIViewController {
         profileImageView.centerYAnchor.constraint(equalTo: containerView.centerYAnchor).isActive = true
         profileImageView.heightAnchor.constraint(equalToConstant: 40).isActive = true
         profileImageView.widthAnchor.constraint(equalToConstant: 40).isActive = true
-        
-        foundIndicator.centerXAnchor.constraint(equalTo: profileImageView.centerXAnchor).isActive = true
-        foundIndicator.centerYAnchor.constraint(equalTo: profileImageView.centerYAnchor).isActive = true
-        foundIndicator.widthAnchor.constraint(equalToConstant: 44).isActive = true
-        foundIndicator.heightAnchor.constraint(equalToConstant: 44).isActive = true
-        foundIndicator.isHidden = true
-        beenCaughtIndicator.centerXAnchor.constraint(equalTo: profileImageView.centerXAnchor).isActive = true
-        beenCaughtIndicator.centerYAnchor.constraint(equalTo: profileImageView.centerYAnchor).isActive = true
-        beenCaughtIndicator.widthAnchor.constraint(equalToConstant: 44).isActive = true
-        beenCaughtIndicator.heightAnchor.constraint(equalToConstant: 44).isActive = true
-        beenCaughtIndicator.isHidden = true
         
         let nameLabel = UILabel()
         containerView.addSubview(nameLabel)

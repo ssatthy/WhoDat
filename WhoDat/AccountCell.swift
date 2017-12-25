@@ -22,7 +22,6 @@ class AccountCell: UITableViewCell {
                 self.timeLabel.text = dateFormatter.string(from: timestampDate as Date)
             }
             if oldValue == nil {
-                setupAttention(account: message!.account!)
                 setupUnread()
             }
         }
@@ -57,26 +56,6 @@ class AccountCell: UITableViewCell {
         return imageView
     }()
     
-    let foundIndicator: UIView = {
-        let indicator = UIView()
-        indicator.translatesAutoresizingMaskIntoConstraints = false
-        indicator.layer.cornerRadius = 26
-        indicator.layer.masksToBounds = true
-        indicator.backgroundColor = UIColor(r: 0, g: 204, b: 0)
-        indicator.isHidden = true
-        return indicator
-    }()
-    
-    let beenCaughtIndicator: UIView = {
-        let indicator = UIView()
-        indicator.translatesAutoresizingMaskIntoConstraints = false
-        indicator.layer.cornerRadius = 26
-        indicator.layer.masksToBounds = true
-        indicator.backgroundColor = UIColor.red
-        indicator.isHidden = true
-        return indicator
-    }()
-    
     let unread: UIView = {
         let indicator = UIView()
         indicator.translatesAutoresizingMaskIntoConstraints = false
@@ -98,8 +77,6 @@ class AccountCell: UITableViewCell {
         super.init(style: .subtitle, reuseIdentifier: reuseIdentifier)
         
         addSubview(unread)
-        addSubview(foundIndicator)
-        addSubview(beenCaughtIndicator)
         addSubview(profileImageView)
         
         unread.leftAnchor.constraint(equalTo: self.leftAnchor, constant: 4).isActive = true
@@ -112,16 +89,6 @@ class AccountCell: UITableViewCell {
         profileImageView.widthAnchor.constraint(equalToConstant: 48).isActive = true
         profileImageView.heightAnchor.constraint(equalToConstant: 48).isActive = true
         
-        foundIndicator.centerXAnchor.constraint(equalTo: profileImageView.centerXAnchor).isActive = true
-        foundIndicator.centerYAnchor.constraint(equalTo: self.centerYAnchor).isActive = true
-        foundIndicator.widthAnchor.constraint(equalToConstant: 52).isActive = true
-        foundIndicator.heightAnchor.constraint(equalToConstant: 52).isActive = true
-        
-        beenCaughtIndicator.centerXAnchor.constraint(equalTo: profileImageView.centerXAnchor).isActive = true
-        beenCaughtIndicator.centerYAnchor.constraint(equalTo: self.centerYAnchor).isActive = true
-        beenCaughtIndicator.widthAnchor.constraint(equalToConstant: 52).isActive = true
-        beenCaughtIndicator.heightAnchor.constraint(equalToConstant: 52).isActive = true
-        
         addSubview(timeLabel)
         
         timeLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -132,38 +99,6 @@ class AccountCell: UITableViewCell {
         
     }
     
-    private func setupAttention(account: Account) {
-        guard let uid = Auth.auth().currentUser?.uid else {return}
-        let refCaught = Database.database().reference().child(Configuration.environment).child("users-caught").child(uid).queryOrderedByKey()
-            .queryEqual(toValue: account.id!)
-        refCaught.observe(.value, with: {(snapshot) in
-            print("found")
-            print(snapshot)
-            if let dictionary = snapshot.value as? [String: Int] {
-                let value = Array(dictionary)[0].value
-                if value == 1 {
-                    self.foundIndicator.isHidden = false
-                } else if value == 0 {
-                    self.foundIndicator.isHidden = true
-                }
-            } else {
-                self.foundIndicator.isHidden = true
-            }
-        })
-        
-        let refBeenCaught = Database.database().reference().child(Configuration.environment).child("users-been-caught").child(uid).queryOrderedByKey().queryEqual(toValue: account.id!)
-        refBeenCaught.observe(.value, with: {(snapshot) in
-            print("caught")
-            print(snapshot)
-            if let _ = snapshot.value as? [String: Int] {
-                self.beenCaughtIndicator.isHidden = false
-            } else {
-                self.beenCaughtIndicator.isHidden = true
-            }
-            
-        })
-    }
-    
     func setupUnread() {
         unread.isHidden = true
         guard let uid = Auth.auth().currentUser?.uid else {return}
@@ -171,10 +106,10 @@ class AccountCell: UITableViewCell {
         ref.observe(.value, with: {(snapshot) in
             print("read observed")
             print(snapshot)
-            if let read = snapshot.value as? Int, read == 0 {
-                self.unread.isHidden = true
-            } else {
+            if let read = snapshot.value as? Int, read > 0 {
                 self.unread.isHidden = false
+            } else {
+                self.unread.isHidden = true
             }
         })
     }

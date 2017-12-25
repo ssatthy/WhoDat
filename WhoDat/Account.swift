@@ -16,8 +16,8 @@ import UIKit
     var profileImageUrl: String?
     var token: String?
 
-    var representedUserId: String?
+    var toId: String?
     
-    var impersonatingUserId: String?
-    
+    var anonymous = false
+    var found = "none"
 }

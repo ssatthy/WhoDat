@@ -11,61 +11,105 @@ import Firebase
 import Contacts
 import ContactsUI
 
-class NewMessageController: UITableViewController, CNContactPickerDelegate , InviteDelegate  {
+class NewMessageController: UITableViewController, InviteDelegate  {
 
     let cellId = "cellId"
     var accounts = [Account]()
-    
+    let contactStore = CNContactStore()
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Cancel", style: .plain, target: self, action: #selector(handleCancel))
         navigationItem.title = "Select a friend"
-        navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Add", style: .plain, target: self, action: #selector(handleAdd))
+        navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Invite", style: .plain, target: self, action: #selector(handleInvite))
 
         tableView.register(AccountCell.self, forCellReuseIdentifier: cellId)
-        fetchUsers()
+        fetchAndFilterUsers()
+        askContactPermission()
     }
-
+    
+    func askContactPermission() {
+        let type = CNEntityType.contacts
+        let status = CNContactStore.authorizationStatus(for: type)
+        if status == CNAuthorizationStatus.authorized {
+            autoscanConnections()
+        } else if status == CNAuthorizationStatus.notDetermined {
+            let store = CNContactStore.init()
+            store.requestAccess(for: type, completionHandler: {(success, nil) in
+                if success {
+                   self.autoscanConnections()
+                }
+            })
+        } else if status == CNAuthorizationStatus.denied {
+            showContactDeniedMessage()
+        }
+    }
+    
+    func autoscanConnections() {
+        let keys = [CNContactPhoneNumbersKey]
+        let request = CNContactFetchRequest(keysToFetch: keys as [CNKeyDescriptor])
+        do {
+            try self.contactStore.enumerateContacts(with: request) {
+                (contact, stop) in
+                for phoneNumber in contact.phoneNumbers {
+                    var number = phoneNumber.value.value(forKey: "digits") as! String
+                    let code = phoneNumber.value.value(forKey: "countryCode") as! String
+                    if !number.starts(with: "+"), let phoneCode =  LocalUserRepository.shared().getPhoneCode(countryCode: code) {
+                        number = phoneCode + number
+                    }
+                    
+                    let userRef = Database.database().reference().child(Configuration.environment).child("phones").child(number)
+                    userRef.observeSingleEvent(of: .value, with: {(snapshot) in
+                        if let userId = snapshot.value as? String {
+                            print("phone exists: \(number)")
+                            print(snapshot)
+                            if userId == LocalUserRepository.currentUid {return}
+                            
+                            let connectionRef = Database.database().reference().child(Configuration.environment).child("connections").child(LocalUserRepository.currentUid)
+                            connectionRef.updateChildValues([userId : "none"])
+                            let connectionOtherRef = Database.database().reference().child(Configuration.environment).child("connections").child(userId)
+                            connectionOtherRef.updateChildValues([LocalUserRepository.currentUid : "none"])
+                        }
+                    })
+                    
+                }
+            }
+        }
+        catch {
+            print("unable to fetch contacts \(error)")
+        }
+    }
+    
     var blockedUserIds = Array<String>()
     
     func fetchAndFilterUsers() {
-        guard let uid = Auth.auth().currentUser?.uid else {return}
-        
-        Database.database().reference().child(Configuration.environment).child("user-blocked").child(uid).observeSingleEvent(of: .value, with: {(snapshot) in
-            if let blockedUsers = snapshot.value as? [String: String] {
-                self.blockedUserIds = Array(blockedUsers.keys)
+        Database.database().reference().child(Configuration.environment).child("blocked-users").child(LocalUserRepository.currentUid).observeSingleEvent(of: .value, with: {(snapshot) in
+            if let dictionary = snapshot.value as? [String : String] {
+                self.blockedUserIds = Array(dictionary.keys)
             }
             self.fetchUsers()
         })
     }
     
     func fetchUsers() {
-        guard let uid = Auth.auth().currentUser?.uid else {
-            return
-        }
-
-        Database.database().reference().child(Configuration.environment).child("connections").child(uid).observe(.childAdded, with:
+        Database.database().reference().child(Configuration.environment).child("connections").child(LocalUserRepository.currentUid).observe(.childAdded, with:
             {(snapshot) in
                 let userId = snapshot.key
-                let representedValue = snapshot.value
+                if self.blockedUserIds.contains(userId) {return}
+                
+                let toId = snapshot.value as! String
                 
                 // intentionally not using cache here, because have ample time here to load user data and help to refresh user details
                 let userRef = Database.database().reference().child(Configuration.environment).child("users").child(userId)
                 userRef.observeSingleEvent(of: .value, with: {(snapshot) in
                     if let dictionary = snapshot.value as? [String: AnyObject] {
                         let account = Account()
-                        account.id = snapshot.key
+                        account.id = userId
                         account.setValuesForKeys(dictionary)
+                        account.toId = toId
+                        
                         LocalUserRepository.shared().setObject(account)
-                        
-                        if let dictionary = representedValue as? [String: String] {
-                            let map = Array(dictionary)[0]
-                            account.representedUserId = map.key
-                            account.impersonatingUserId = map.value
-                        }
-                        
                         self.accounts.append(account)
                         DispatchQueue.main.async {
                             self.tableView.reloadData()
@@ -105,70 +149,15 @@ class NewMessageController: UITableViewController, CNContactPickerDelegate , Inv
         dismiss(animated: true, completion: nil)
     }
     
-    @objc func handleAdd() {
-        let type = CNEntityType.contacts
-        let status = CNContactStore.authorizationStatus(for: type)
-        if status == CNAuthorizationStatus.authorized {
-            presentContacts()
-        } else if status == CNAuthorizationStatus.notDetermined {
-            let store = CNContactStore.init()
-            store.requestAccess(for: type, completionHandler: {(success, nil) in
-                if success {
-                    self.presentContacts()
-                }
-            })
-        }
-    }
-    
-    func presentContacts() {
-        let picker = CNContactPickerViewController.init()
-        picker.predicateForSelectionOfContact = NSPredicate(format: "phoneNumbers.@count > 0")
-        picker.displayedPropertyKeys = [CNContactPhoneNumbersKey]
-        picker.delegate = self
-        self.present(picker, animated: true, completion: nil)
-    }
-    
-    func contactPickerDidCancel(_ picker: CNContactPickerViewController) {
-        picker.dismiss(animated: true, completion: nil)
-    }
-    
-    func contactPicker(_ picker: CNContactPickerViewController, didSelect contactProperty: CNContactProperty) {
-        addNewConnection(contactProperty)
-    }
-    
-    func addNewConnection(_ contactProperty: CNContactProperty) {
-        guard let uid = Auth.auth().currentUser?.uid else {
-            return
-        }
-        let phone  = (contactProperty.value as? CNPhoneNumber)?.value(forKey: "digits")
-        let userRef = Database.database().reference().child(Configuration.environment).child("users").queryOrdered(byChild: "phone").queryEqual(toValue: phone)
-        userRef.observeSingleEvent(of: .value, with: {(snapshot) in
-            print("check if phone exists")
-            print(snapshot)
-            if let dictionary = snapshot.value as? [String: AnyObject] {
-                let userId = Array(dictionary)[0].key
-                let connectionRef = Database.database().reference().child(Configuration.environment).child("connections").child(uid)
-                connectionRef.updateChildValues([userId : "none"])
-                let connectionOtherRef = Database.database().reference().child(Configuration.environment).child("connections").child(userId)
-                connectionOtherRef.updateChildValues([uid : "none"])
-            } else {
-                print(contactProperty.contact.givenName)
-                let alert = UIAlertController(title: "Invite \(contactProperty.contact.givenName)", message: "You friend is not on WhoDat. Would you like to invite?", preferredStyle: .alert)
-                alert.addAction(UIAlertAction(title: "Cancel", style: .default, handler: nil))
-                alert.addAction(UIAlertAction(title: "Invite", style: .default, handler: {(_) in
-                    let objectsToShare = ["Hey there!, just try this one out! https://itunes.apple.com/us/app/whodat-anonymous-until-not/id1323692195?ls=1&mt=8"]
-                    let activityController = UIActivityViewController(
-                        activityItems: objectsToShare,
-                        applicationActivities: nil)
-                    activityController.popoverPresentationController?.sourceRect = self.view.frame
-                    activityController.popoverPresentationController?.sourceView = self.view
-                    activityController.popoverPresentationController?.permittedArrowDirections = .any
-                    self.present(activityController, animated: true, completion: nil)
-                }))
-                self.present(alert, animated: true, completion: nil)
-            }
-            
-        })
+    @objc func handleInvite() {
+        let objectsToShare = ["Hey there!, just try this one out! https://itunes.apple.com/us/app/whodat-anonymous-until-not/id1323692195?ls=1&mt=8"]
+        let activityController = UIActivityViewController(
+            activityItems: objectsToShare,
+            applicationActivities: nil)
+        activityController.popoverPresentationController?.sourceRect = self.view.frame
+        activityController.popoverPresentationController?.sourceView = self.view
+        activityController.popoverPresentationController?.permittedArrowDirections = .any
+        self.present(activityController, animated: true, completion: nil)
     }
     
     var messageController: MessageController?
@@ -176,7 +165,26 @@ class NewMessageController: UITableViewController, CNContactPickerDelegate , Inv
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         dismiss(animated: true, completion: {
             let account = self.accounts[indexPath.row]
-            self.messageController?.showChatLogController(selectedAccount: account, accounts: self.accounts)
+            self.messageController?.showChatLogController(selectedAccount: account)
+        })
+    }
+    
+    func showContactDeniedMessage() {
+        
+        let toastLabel = UILabel(frame: CGRect(x: self.view.frame.minX + 50, y: self.view.frame.size.height/2, width: self.view.frame.size.width - 100 , height: 35))
+        toastLabel.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        toastLabel.textColor = UIColor.white
+        toastLabel.textAlignment = .center;
+        toastLabel.font = UIFont(name: "Montserrat-Light", size: 12.0)
+        toastLabel.text = "Access to contact denied."
+        toastLabel.alpha = 1.0
+        toastLabel.layer.cornerRadius = 10;
+        toastLabel.clipsToBounds  =  true
+        self.view.addSubview(toastLabel)
+        UIView.animate(withDuration: 4.0, delay: 0.1, options: .curveEaseOut, animations: {
+            toastLabel.alpha = 0.0
+        }, completion: {(isCompleted) in
+            toastLabel.removeFromSuperview()
         })
     }
 

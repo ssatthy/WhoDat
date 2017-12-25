@@ -89,6 +89,8 @@ extension LoginController: UIImagePickerControllerDelegate, UINavigationControll
                     print(err ?? "Error when adding new user!")
                     return
                 }
+                let phoneRef = Database.database().reference().child(Configuration.environment).child("phones")
+                phoneRef.updateChildValues([values["phone"] as! String : uid])
                 
                 LocalUserRepository.shared().reset()
                 self.messageController?.fetchUserAndSetNavBar()

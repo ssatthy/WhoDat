@@ -25,8 +25,8 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     var account: Account? {
         didSet {
             self.setNavBar(account: account!)
-            if account?.representedUserId == nil {
-                findARepresentation()
+            if account?.toId == "none" {
+                setupAnonymousId()
             }
         }
     }
@@ -73,10 +73,9 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         alert.addAction(UIAlertAction(title: "Report", style: .default, handler: { _ in
             
             if let textField = alert.textFields?[0], let text = textField.text {
-                guard let uid = Auth.auth().currentUser?.uid else {return}
-                let ref = Database.database().reference().child(Configuration.environment).child("user-report").child(uid)
+                let ref = Database.database().reference().child(Configuration.environment).child("user-report").child(LocalUserRepository.currentUid)
                 let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .long, timeStyle: .long)
-                ref.updateChildValues([ self.account!.representedUserId! + timestamp : text])
+                ref.updateChildValues([ self.account!.id! + timestamp : text])
             }
         }))
         
@@ -87,16 +86,26 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         let alert = UIAlertController(title: "Block This User", message: "You both cannot send or receive message if you do so.", preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "Cancel", style: .default, handler: nil))
         alert.addAction(UIAlertAction(title: "Block", style: .destructive, handler: { _ in
-            guard let uid = Auth.auth().currentUser?.uid else {return}
             
-            AccountViewController().endChat(account: self.account!)
-            
-            let ref = Database.database().reference().child(Configuration.environment).child("user-blocked").child(uid)
-            let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .long, timeStyle: .long)
-            ref.updateChildValues([ self.account!.representedUserId! : timestamp])
-            
-            let ref1 = Database.database().reference().child(Configuration.environment).child("user-blocked").child(self.account!.representedUserId!)
-            ref1.updateChildValues([ uid : "reverse block"])
+            if self.account!.anonymous {
+                AccountViewController().endAnonymousChat(account: self.account!, stage: "ended")
+                
+                let ref = Database.database().reference().child(Configuration.environment).child("blocked-users").child(LocalUserRepository.currentUid)
+                let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .long, timeStyle: .long)
+                ref.updateChildValues([ self.account!.toId! : timestamp])
+                
+                let ref1 = Database.database().reference().child(Configuration.environment).child("blocked-users").child(self.account!.toId!)
+                ref1.updateChildValues([ LocalUserRepository.currentUid : "reverse block"])
+            } else {
+                AccountViewController().endChat(account: self.account!)
+                
+                let ref = Database.database().reference().child(Configuration.environment).child("blocked-users").child(LocalUserRepository.currentUid)
+                let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .long, timeStyle: .long)
+                ref.updateChildValues([ self.account!.id! : timestamp])
+                
+                let ref1 = Database.database().reference().child(Configuration.environment).child("blocked-users").child(self.account!.id!)
+                ref1.updateChildValues([ LocalUserRepository.currentUid : "reverse block"])
+            }
             
         }))
         
@@ -123,77 +132,80 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     }
     func observeAlert() {
         print("setup alert observe")
-        guard let uid = Auth.auth().currentUser?.uid else {return}
-        let ref = Database.database().reference().child(Configuration.environment).child("connections").child(uid).child(account!.id!)
-        ref.observe(.childRemoved, with: {(snapshot) in
-            self.navigationController?.popViewController(animated: true)
-        })
+        if account!.anonymous {
+            let ref = Database.database().reference().child(Configuration.environment).child("anonymous-users").child(account!.id!)
+            ref.observe(.childRemoved, with: {(snapshot) in
+                if self.account!.found == "found" {
+                    let alert = UIAlertController(title: "Well Done!", message: "You have caught this person.", preferredStyle: .alert)
+                    alert.addAction(UIAlertAction(title: "Ok", style: .default, handler: {(_) in
+                        self.navigationController?.popViewController(animated: true)
+                    }))
+                    self.present(alert, animated: true, completion: nil)
+                    
+                    self.account!.found = "none"
+                } else {
+                    self.navigationController?.popViewController(animated: true)
+                }
+            })
+        } else if account?.toId != "none" {
+            let ref = Database.database().reference().child(Configuration.environment).child("anonymous-users").child(account!.toId!)
+            ref.observe(.childRemoved, with: {(snapshot) in
+                self.navigationController?.popViewController(animated: true)
+                
+            })
+        }
+        
     }
     
     var guessButton: UIBarButtonItem?
-    var seeButton: UIBarButtonItem?
     var missedButton: UIBarButtonItem?
     
     func setGuessButton() {
-        self.guessButton = UIBarButtonItem(title: "Who?", style: .plain, target: self, action: #selector(handleGuess))
-        self.guessButton?.tintColor = UIColor.red
-        navigationItem.rightBarButtonItem = guessButton
-        
-        let infoButton = UIButton(type: .infoLight)
-        infoButton.addTarget(self, action: #selector(handleSee), for: .touchUpInside)
-        self.seeButton = UIBarButtonItem(customView: infoButton)
-        
-        let infoMissed = UIButton(type: .infoDark)
-        infoMissed.addTarget(self, action: #selector(showMissed), for: .touchUpInside)
-        self.missedButton = UIBarButtonItem(customView: infoMissed)
-        
-        setupAttention()
+        if account!.anonymous {
+            self.guessButton = UIBarButtonItem(title: "Who?", style: .plain, target: self, action: #selector(handleGuess))
+            self.guessButton?.tintColor = UIColor.red
+            navigationItem.rightBarButtonItem = guessButton
+            
+            let infoMissed = UIButton(type: .infoDark)
+            infoMissed.addTarget(self, action: #selector(showMissed), for: .touchUpInside)
+            self.missedButton = UIBarButtonItem(customView: infoMissed)
+            
+            observeFailedAttempt()
+        } else {
+            let info = UIButton(type: .infoDark)
+            info.addTarget(self, action: #selector(showInfo), for: .touchUpInside)
+            navigationItem.rightBarButtonItem = UIBarButtonItem(customView: info)
+        }
     }
     
-    private func setupAttention() {
-        guard let uid = Auth.auth().currentUser?.uid else {return}
-        
-        let foundIndicator = navigationItem.titleView?.viewWithTag(111)
-        let beenCaughtIndicator = navigationItem.titleView?.viewWithTag(222)
-        
-        let refCaught = Database.database().reference().child(Configuration.environment).child("users-caught").child(uid).queryOrderedByKey()
-            .queryEqual(toValue: account!.id!)
-        refCaught.observe(.value, with: {(snapshot) in
-            if let dictionary = snapshot.value as? [String: Int] {
-                let value = Array(dictionary)[0].value
-                if value == 1 {
-                    foundIndicator?.isHidden = false
-                    self.navigationItem.rightBarButtonItem = self.seeButton
-                } else if value == 0 {
-                    self.navigationItem.rightBarButtonItem = self.missedButton
-                    foundIndicator?.isHidden = true
+    func observeFailedAttempt() {
+        Database.database().reference().child(Configuration.environment).child("failed-attempt").child(LocalUserRepository.currentUid).child(account!.id!).observe(.value, with: {(snapshot) in
+            if let _ = snapshot.value as? Int {
+                if self.account!.found == "missed" {
+                    let alert = UIAlertController(title: "You Missed It!", message: "You failed to guess this person correctly.", preferredStyle: .alert)
+                    alert.addAction(UIAlertAction(title: "Ok", style: .default, handler: nil))
+                    self.present(alert, animated: true, completion: nil)
+                    
+                    self.account!.found = "none"
                 }
+                self.navigationItem.rightBarButtonItem = self.missedButton
                 
-            } else {
-                self.navigationItem.rightBarButtonItem = self.guessButton
-                foundIndicator?.isHidden = true
             }
         })
-        
-        let refBeenCaught = Database.database().reference().child(Configuration.environment).child("users-been-caught").child(uid).queryOrderedByKey().queryEqual(toValue: account!.id!)
-        refBeenCaught.observe(.value, with: {(snapshot) in
-            if let _ = snapshot.value as? [String: Int] {
-                beenCaughtIndicator?.isHidden = false
-            } else {
-                beenCaughtIndicator?.isHidden = true
-            }
-            
-        })
-        
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         observeUserMessages()
         setupKeyboardObservers()
-        guard let uid = Auth.auth().currentUser?.uid else {return}
-        let refUpdate = Database.database().reference().child(Configuration.environment).child("last-user-message-read").child(uid)
-        refUpdate.updateChildValues([account!.id!: 0])
+        
+        let lastRecipientMessageReadRef = Database.database().reference().child(Configuration.environment).child("last-user-message-read").child(LocalUserRepository.currentUid).child(account!.id!)
+        lastRecipientMessageReadRef.runTransactionBlock({(currentCount) -> TransactionResult in
+            if let _ = currentCount.value as? Int {
+                currentCount.value = 0
+            }
+            return TransactionResult.success(withValue: currentCount)
+        })
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -202,8 +214,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     }
     
     func setBadgeCount() {
-        guard let uid = Auth.auth().currentUser?.uid else {return}
-        let ref = Database.database().reference().child(Configuration.environment).child("last-user-message-read").child(uid)
+        let ref = Database.database().reference().child(Configuration.environment).child("last-user-message-read").child(LocalUserRepository.currentUid)
         ref.observeSingleEvent(of: .value, with: {(snapshot) in
             if let dictionary = snapshot.value as? [String: Int] {
                 var total = 0 ;
@@ -218,76 +229,34 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     }
     
     @objc func showMissed() {
-        let alert = UIAlertController(title: "You missed it", message: "You failed to guess this person correctly.", preferredStyle: .alert)
+        let alert = UIAlertController(title: "You Missed It", message: "You failed to guess this person correctly.", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "End Chat", style: .default, handler: {(_) in
+          AccountViewController().endAnonymousChat(account: self.account!, stage: "ended")
+            self.showAds()
+        }))
         alert.addAction(UIAlertAction(title: "Ok", style: .default, handler: {(_) in
             self.showAds()
         }))
         self.present(alert, animated: true, completion: nil)
     }
     
-    @objc func handleSee() {
-        if let representedUser = LocalUserRepository.shared().loadUserFromCache(uid: account!.representedUserId!) {
-            showUserProfile(account: representedUser)
-        } else {
-            Database.database().reference().child(Configuration.environment).child("users").child(account!.representedUserId!).observeSingleEvent(of: .value, with: {(snapshot) in
-                if let dictionary = snapshot.value as? [String: AnyObject] {
-                    let account = Account()
-                    account.id = snapshot.key
-                    account.setValuesForKeys(dictionary)
-                    LocalUserRepository.shared().setObject(account)
-                    
-                    self.showUserProfile(account: account)
-                }
-            })
-        }
-    }
-    
-    func showUserProfile(account: Account) {
-        let alert = UIAlertController(title: "You got 'em!", message: "You are chatting with:", preferredStyle: .alert)
-        
-        let heightConstraint = NSLayoutConstraint(item: alert.view, attribute: NSLayoutAttribute.height, relatedBy: NSLayoutRelation.equal, toItem: nil, attribute: NSLayoutAttribute.notAnAttribute, multiplier: 1, constant: self.view.frame.height * 0.35)
-        alert.view.addConstraint(heightConstraint)
-        
-        let profileImageView = UIImageView()
-        profileImageView.contentMode = .scaleAspectFill
-        profileImageView.layer.cornerRadius = (alert.view.frame.height * 4/36) * 1/2
-        profileImageView.clipsToBounds = true
-        profileImageView.translatesAutoresizingMaskIntoConstraints = false
-        
-        if let profileImageUrl = account.profileImageUrl {
-            profileImageView.loadImagesFromCache(urlString: profileImageUrl)
-        } else {
-            profileImageView.image = UIImage(named: "profilepic")
-        }
-        
-        alert.view.addSubview(profileImageView)
-        profileImageView.centerXAnchor.constraint(equalTo: alert.view.centerXAnchor).isActive = true
-        profileImageView.centerYAnchor.constraint(equalTo: alert.view.centerYAnchor, constant: -alert.view.frame.height * 1/36 * 1/4).isActive = true
-        profileImageView.heightAnchor.constraint(equalToConstant: alert.view.frame.height * 4/36).isActive = true
-        profileImageView.widthAnchor.constraint(equalToConstant: alert.view.frame.height * 4/36).isActive = true
-        
-        let nameLabel = UILabel()
-        nameLabel.font = UIFont.boldSystemFont(ofSize: alert.view.frame.height * 1/36 - 2)
-        nameLabel.text = account.name
-        nameLabel.textAlignment = .center
-        nameLabel.translatesAutoresizingMaskIntoConstraints = false
-        alert.view.addSubview(nameLabel)
-        
-        nameLabel.centerXAnchor.constraint(equalTo: profileImageView.centerXAnchor).isActive = true
-        nameLabel.topAnchor.constraint(equalTo: profileImageView.bottomAnchor, constant: alert.view.frame.height * 1/36 * 1/4).isActive = true
-        nameLabel.widthAnchor.constraint(equalTo: alert.view.widthAnchor).isActive = true
-        nameLabel.heightAnchor.constraint(equalToConstant: alert.view.frame.height * 1/36).isActive = true
-        let ok = UIAlertAction(title: "Ok", style: .default, handler: {(_) in
+    @objc func showInfo() {
+        let alert = UIAlertController(title: "End Chat", message: "Do you like to end this chat?", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "End Chat", style: .default, handler: {(_) in
+            AccountViewController().endChat(account: self.account!)
             self.showAds()
-        })
-        alert.addAction(ok)
+        }))
+        alert.addAction(UIAlertAction(title: "Cancel", style: .default, handler: {(_) in
+            self.showAds()
+        }))
         self.present(alert, animated: true, completion: nil)
     }
     
     @objc func handleGuess() {
         
         let accountViewController = AccountViewController()
-        accountViewController.pretendingUser = account
+        account?.found = "none"
+        accountViewController.account = account
         let navController = UINavigationController(rootViewController: accountViewController)
         present(navController, animated: true, completion: nil)
     }
@@ -356,10 +325,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         NotificationCenter.default.removeObserver(self)
-        guard let uid = Auth.auth().currentUser?.uid, let toId = account?.representedUserId else {
-            return
-        }
-        let ref = Database.database().reference().child(Configuration.environment).child("user-messages").child(uid).child(toId)
+        let ref = Database.database().reference().child(Configuration.environment).child("user-messages").child(LocalUserRepository.currentUid).child(self.account!.id!)
         ref.removeAllObservers()
         setBadgeCount()
         
@@ -380,11 +346,11 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     @objc func observeMoreUserMessages() {
         print("Observe more")
         if messages.count != 0 {
-            guard let uid = Auth.auth().currentUser?.uid, let toId = account?.representedUserId else {
+            guard let toId = account?.toId else {
                 return
             }
             let lastMessageId = messages[0].id
-            let ref = Database.database().reference().child(Configuration.environment).child("user-messages").child(uid).child(toId).queryOrderedByKey().queryEnding(atValue: lastMessageId).queryLimited(toLast: 20)
+            let ref = Database.database().reference().child(Configuration.environment).child("user-messages").child(LocalUserRepository.currentUid).child(toId).queryOrderedByKey().queryEnding(atValue: lastMessageId).queryLimited(toLast: 20)
             ref.observeSingleEvent(of: .value, with: {(snapshot) in
                 if var dictionary = snapshot.value as? [String: String] {
                     dictionary.removeValue(forKey: lastMessageId!)
@@ -418,18 +384,15 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     
     @objc func observeUserMessages() {
         
-        guard let uid = Auth.auth().currentUser?.uid, let toId = account?.representedUserId else {
-            return
-        }
         if messages.count > 0 {
             let lastMessageId = messages[messages.count - 1].id
-            let ref = Database.database().reference().child(Configuration.environment).child("user-messages").child(uid).child(toId).queryOrderedByKey().queryStarting(atValue: lastMessageId).queryLimited(toLast: 20)
+            let ref = Database.database().reference().child(Configuration.environment).child("user-messages").child(LocalUserRepository.currentUid).child(account!.id!).queryOrderedByKey().queryStarting(atValue: lastMessageId).queryLimited(toLast: 20)
             ref.observe(.childAdded, with: {(snapshot) in
                 let messageId = snapshot.key
                 self.fetchMessage(messageId: messageId)
             })
         } else {
-            let ref = Database.database().reference().child(Configuration.environment).child("user-messages").child(uid).child(toId).queryLimited(toLast: 20)
+            let ref = Database.database().reference().child(Configuration.environment).child("user-messages").child(LocalUserRepository.currentUid).child(account!.id!).queryLimited(toLast: 20)
             ref.observe(.childAdded, with: {(snapshot) in
                 let messageId = snapshot.key
                 self.fetchMessage(messageId: messageId)
@@ -461,8 +424,8 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
                 self.scrollToLastItem()
             }
         })
-        guard let uid = Auth.auth().currentUser?.uid else {return}
-        let ref = Database.database().reference().child(Configuration.environment).child("last-user-message-read").child(uid)
+        
+        let ref = Database.database().reference().child(Configuration.environment).child("last-user-message-read").child(LocalUserRepository.currentUid)
         ref.updateChildValues([account!.id!: 0])
     }
     
@@ -484,7 +447,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         
         cell.bubbleWidthAnchor?.constant = estimateFrameForText(text: message.message!).width + 32
         
-        if message.fromId == Auth.auth().currentUser?.uid {
+        if (account!.anonymous && message.fromId == LocalUserRepository.currentUid) || (!account!.anonymous && message.fromId == account!.toId!) {
             cell.bubbleView.backgroundColor = MessageCell.blueColor
             cell.textView.textColor = UIColor.white
             cell.bubbleProfile.isHidden = true
@@ -527,15 +490,14 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
     }
     
     @objc func handleSend() {
+        if inputTextField.text!.isEmpty { return }
         let ref = Database.database().reference().child(Configuration.environment).child("messages").childByAutoId()
-        
-        if let toId = account!.representedUserId, let impersonatingUserId = self.account!.impersonatingUserId, !inputTextField.text!.isEmpty {
-            let fromId = Auth.auth().currentUser!.uid
+        if account!.anonymous {
             let timestamp = NSDate().timeIntervalSince1970
-            let values = ["message": inputTextField.text!, "toId": toId,
-                          "fromId": fromId, "timestamp": timestamp] as [String : Any]
+            let values = ["message": inputTextField.text!, "toId": account!.toId!,
+                          "fromId": LocalUserRepository.currentUid, "timestamp": timestamp] as [String : Any]
             self.inputTextField.text = nil
-            let lastRecipientMessageReadRef = Database.database().reference().child(Configuration.environment).child("last-user-message-read").child(toId).child(impersonatingUserId)
+            let lastRecipientMessageReadRef = Database.database().reference().child(Configuration.environment).child("last-user-message-read").child(account!.toId!).child(LocalUserRepository.currentUid)
             lastRecipientMessageReadRef.runTransactionBlock({(currentCount) -> TransactionResult in
                 if let count = currentCount.value as? Int {
                     currentCount.value = count + 1
@@ -548,101 +510,72 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
                     print(error!)
                     return
                 }
-                let userMessageRef = Database.database().reference().child(Configuration.environment).child("user-messages").child(fromId).child(toId)
+                let userMessageRef = Database.database().reference().child(Configuration.environment).child("user-messages").child(LocalUserRepository.currentUid).child(self.account!.id!)
                 let messageId = ref.key
-                userMessageRef.updateChildValues([messageId : self.account!.id!])
+                userMessageRef.updateChildValues([messageId : 0])
                 
-                let lastUserMessageRef = Database.database().reference().child(Configuration.environment).child("last-user-message").child(fromId)
-                lastUserMessageRef.updateChildValues([self.account!.id! : [messageId: impersonatingUserId]])
+                let lastUserMessageRef = Database.database().reference().child(Configuration.environment).child("last-user-message").child(LocalUserRepository.currentUid)
+                lastUserMessageRef.updateChildValues([self.account!.id! : [messageId : self.account!.toId!]])
                 
-                let recipientMessageRef = Database.database().reference().child(Configuration.environment).child("user-messages").child(toId).child(fromId)
-                recipientMessageRef.updateChildValues([messageId : impersonatingUserId])
+                let recipientMessageRef = Database.database().reference().child(Configuration.environment).child("user-messages").child(self.account!.toId!).child(LocalUserRepository.currentUid)
+                recipientMessageRef.updateChildValues([messageId : 0])
                 
-                let lastRecipientMessageRef = Database.database().reference().child(Configuration.environment).child("last-user-message").child(toId)
-                lastRecipientMessageRef.updateChildValues([impersonatingUserId : [messageId: self.account!.id!]])
+                let lastRecipientMessageRef = Database.database().reference().child(Configuration.environment).child("last-user-message").child(self.account!.toId!)
+                lastRecipientMessageRef.updateChildValues([LocalUserRepository.currentUid : [messageId : self.account!.id!]])
+            }
+        } else {
+            let timestamp = NSDate().timeIntervalSince1970
+            let values = ["message": inputTextField.text!, "toId": account!.id!,
+                          "fromId": account!.toId!, "timestamp": timestamp] as [String : Any]
+            self.inputTextField.text = nil
+            let lastRecipientMessageReadRef = Database.database().reference().child(Configuration.environment).child("last-user-message-read").child(account!.id!).child(account!.toId!)
+            lastRecipientMessageReadRef.runTransactionBlock({(currentCount) -> TransactionResult in
+                if let count = currentCount.value as? Int {
+                    currentCount.value = count + 1
+                }
+                return TransactionResult.success(withValue: currentCount)
+            })
+            
+            ref.updateChildValues(values) {(error, ref) in
+                if error != nil {
+                    print(error!)
+                    return
+                }
+                let userMessageRef = Database.database().reference().child(Configuration.environment).child("user-messages").child(LocalUserRepository.currentUid).child(self.account!.id!)
+                let messageId = ref.key
+                userMessageRef.updateChildValues([messageId : 0])
+                
+                let lastUserMessageRef = Database.database().reference().child(Configuration.environment).child("last-user-message").child(LocalUserRepository.currentUid)
+                lastUserMessageRef.updateChildValues([self.account!.id! : [messageId : self.account!.toId!]])
+                
+                let recipientMessageRef = Database.database().reference().child(Configuration.environment).child("user-messages").child(self.account!.id!).child(self.account!.toId!)
+                recipientMessageRef.updateChildValues([messageId : 0])
+                
+                let lastRecipientMessageRef = Database.database().reference().child(Configuration.environment).child("last-user-message").child(self.account!.id!)
+                lastRecipientMessageRef.updateChildValues([self.account!.toId! : [messageId : LocalUserRepository.currentUid]])
             }
         }
     }
     
-    
-    var accounts: [Account]?
-    
-    func findARepresentation() {
-        print("Finding a representation....")
-        if accounts != nil {
-            var unRepresentedUsers = [Account]()
+    func setupAnonymousId() {
+        print("Setting up an anonymous id....")
+        let randomId = String(Date().timeIntervalSince1970.hashValue).suffix(3)
+        let ref = Database.database().reference().child(Configuration.environment).child("anonymous-users").childByAutoId()
+        ref.updateChildValues([self.account!.id!: "Anonymous \(randomId)"]) { (error, ref) in
+            self.account?.toId = ref.key
+            let connectionRef = Database.database().reference().child(Configuration.environment).child("connections").child(LocalUserRepository.currentUid)
+            connectionRef.updateChildValues([self.account!.id! : ref.key])
             
-            for user in accounts! {
-                var represented = false
-                for user1 in accounts! {
-                    if(user1.representedUserId == user.id) {
-                        represented = true
-                        break
-                    }
-                }
-                if !represented {
-                    unRepresentedUsers.append(user)
-                }
-            }
+            let messageReadRef = Database.database().reference().child(Configuration.environment).child("last-user-message-read").child(LocalUserRepository.currentUid)
+            messageReadRef.updateChildValues([self.account!.id!: 0])
+            let messageReadRef1 = Database.database().reference().child(Configuration.environment).child("last-user-message-read").child(self.account!.id!)
+            messageReadRef1.updateChildValues([self.account!.toId!: 0])
             
-            if unRepresentedUsers.count > 0 {
-                var represent = unRepresentedUsers[0]
-                if unRepresentedUsers.count > 1 {
-                    represent = unRepresentedUsers[Int(arc4random_uniform(UInt32(unRepresentedUsers.count)))]
-                }
-                account?.representedUserId = represent.id
+            let ref = Database.database().reference().child(Configuration.environment).child("anonymous-users").child(self.account!.toId!)
+            ref.observe(.childRemoved, with: {(snapshot) in
+                self.navigationController?.popViewController(animated: true)
                 
-                findAImpersonation()
-            }
-        }
-    }
-    
-    
-    var unRepresentingUserIds = [String]()
-    let group = DispatchGroup()
-    
-    func findAImpersonation() {
-        print("Finding a impersonating...")
-        
-        let ref = Database.database().reference().child(Configuration.environment).child("connections").child(self.account!.representedUserId!)
-            .queryOrderedByValue().queryEqual(toValue: "none")
-        ref.observeSingleEvent(of: .value, with: {(snapshot) in
-            if let value = snapshot.value as? [String: String] {
-                self.group.enter()
-                self.unRepresentingUserIds.append(Array(value)[0].key)
-                if self.unRepresentingUserIds.count == 1 {
-                    self.group.notify(queue: .main, execute: {
-                        self.updateImpersonation()
-                    })
-                }
-                self.group.leave()
-            }
-        })
-    }
-    
-    
-    @objc func updateImpersonation() {
-        
-        if unRepresentingUserIds.count > 0 {
-            var impersonatingUserId = unRepresentingUserIds[0]
-            if unRepresentingUserIds.count > 1 {
-                impersonatingUserId = unRepresentingUserIds[Int(arc4random_uniform(UInt32(unRepresentingUserIds.count)))]
-            }
-            
-            guard let uid = Auth.auth().currentUser?.uid else {return}
-            
-            account?.impersonatingUserId = impersonatingUserId
-            let connectionRef = Database.database().reference().child(Configuration.environment).child("connections").child(uid)
-            connectionRef.updateChildValues([account!.id! : [account!.representedUserId!: impersonatingUserId]])
-            
-            let connectionRef1 = Database.database().reference().child(Configuration.environment).child("connections").child(account!.representedUserId!)
-            connectionRef1.updateChildValues([impersonatingUserId : [uid: account!.id]])
-            print("representing/impersonating setup")
-            
-            let readRef = Database.database().reference().child(Configuration.environment).child("last-user-message-read").child(uid)
-            readRef.updateChildValues([self.account!.id! : 0])
-            let readRef1 = Database.database().reference().child(Configuration.environment).child("last-user-message-read").child(account!.representedUserId!)
-            readRef1.updateChildValues([impersonatingUserId : 0])
+            })
         }
     }
     

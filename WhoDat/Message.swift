@@ -17,10 +17,5 @@ import Firebase
     var timestamp: NSNumber?
     var message: String?
     
-    func representedUserId() -> String? {
-        return fromId == Auth.auth().currentUser?.uid ? toId : fromId
-    }
-    
-    var pretendingUserId: String?
     var account: Account?
 }

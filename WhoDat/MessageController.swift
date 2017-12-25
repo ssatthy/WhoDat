@@ -66,18 +66,14 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
     
     func observeAddedMessages() {
         print("observe added msg")
-        guard let uid = Auth.auth().currentUser?.uid else {
-            return
-        }
-        let ref = Database.database().reference().child(Configuration.environment).child("last-user-message").child(uid)
+        let ref = Database.database().reference().child(Configuration.environment).child("last-user-message").child(LocalUserRepository.currentUid)
         ref.observe(.childAdded, with: {(snapshot) in
             self.group.enter()
             print("enter")
-            let pretendingUserId = snapshot.key
-            let valueDic = snapshot.value as! [String: String]
-            let messageMap = Array(valueDic)[0]
-            let messageId = messageMap.key
-            let impersonatingUserId = messageMap.value
+            let userId = snapshot.key
+            let map = snapshot.value as! [String: String]
+            let messageId = Array(map)[0].key
+            let toUserId = Array(map)[0].value
             let messageRef = Database.database().reference().child(Configuration.environment).child("messages").child(messageId)
             messageRef.observeSingleEvent(of: .value, with: {(snapshot) in
                 if let dictionary = snapshot.value as? [String: Any] {
@@ -85,25 +81,42 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
                     message.id = messageId
                     message.setValuesForKeys(dictionary)
                     
-                    if let account = LocalUserRepository.shared().loadUserFromCache(uid: pretendingUserId) {
-                        account.impersonatingUserId = impersonatingUserId
+                    if let account = LocalUserRepository.shared().loadUserFromCache(uid: userId) {
                         message.account = account
                         self.setupMessage(message: message)
                         self.group.leave()
                         print("leave")
                     } else {
-                        Database.database().reference().child(Configuration.environment).child("users").child(pretendingUserId).observeSingleEvent(of: .value, with: {(snapshot) in
+                       let ref = Database.database().reference().child(Configuration.environment).child("users").child(userId)
+                        ref.observeSingleEvent(of: .value, with: {(snapshot) in
                             if let dictionary = snapshot.value as? [String: AnyObject] {
                                 let account = Account()
-                                account.id = snapshot.key
+                                account.id = userId
                                 account.setValuesForKeys(dictionary)
-                                account.impersonatingUserId = impersonatingUserId
+                                account.toId = toUserId
                                 LocalUserRepository.shared().setObject(account)
                                 
                                 message.account = account
                                 self.setupMessage(message: message)
                                 self.group.leave()
                                 print("leave")
+                            } else {
+                                let ref = Database.database().reference().child(Configuration.environment).child("anonymous-users").child(userId)
+                                ref.observeSingleEvent(of: .value, with: {(snapshot) in
+                                    if let dictionary = snapshot.value as? [String: String] {
+                                        let account = Account()
+                                        account.id = userId
+                                        account.toId = toUserId
+                                        account.name = Array(dictionary)[0].value
+                                        account.anonymous = true
+                                        LocalUserRepository.shared().setObject(account)
+                                        
+                                        message.account = account
+                                        self.setupMessage(message: message)
+                                        self.group.leave()
+                                        print("leave")
+                                    }
+                                })
                             }
                         })
                     }
@@ -119,11 +132,10 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
         }
         let ref = Database.database().reference().child(Configuration.environment).child("last-user-message").child(uid)
         ref.observe(.childChanged, with: {(snapshot) in
-            let pretendingUserId = snapshot.key
-            let valueDic = snapshot.value as! [String: String]
-            let messageMap = Array(valueDic)[0]
-            let messageId = messageMap.key
-            let impersonatingUserId = messageMap.value
+            let userId = snapshot.key
+            let map = snapshot.value as! [String: String]
+            let messageId = Array(map)[0].key
+            let toUserId = Array(map)[0].value
             let messageRef = Database.database().reference().child(Configuration.environment).child("messages").child(messageId)
             messageRef.observeSingleEvent(of: .value, with: {(snapshot) in
                 if let dictionary = snapshot.value as? [String: Any] {
@@ -131,21 +143,37 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
                     message.id = messageId
                     message.setValuesForKeys(dictionary)
                     
-                    if let account = LocalUserRepository.shared().loadUserFromCache(uid: pretendingUserId) {
-                        account.impersonatingUserId = impersonatingUserId
+                    if let account = LocalUserRepository.shared().loadUserFromCache(uid: userId) {
                         message.account = account
                         self.setupMessage(message: message)
                     } else {
-                        Database.database().reference().child(Configuration.environment).child("users").child(pretendingUserId).observeSingleEvent(of: .value, with: {(snapshot) in
+                        Database.database().reference().child(Configuration.environment).child("users").child(userId).observeSingleEvent(of: .value, with: {(snapshot) in
                             if let dictionary = snapshot.value as? [String: AnyObject] {
                                 let account = Account()
-                                account.id = snapshot.key
+                                account.id = userId
                                 account.setValuesForKeys(dictionary)
-                                account.impersonatingUserId = impersonatingUserId
+                                account.toId = toUserId
                                 LocalUserRepository.shared().setObject(account)
                                 
                                 message.account = account
                                 self.setupMessage(message: message)
+                            } else {
+                                let ref = Database.database().reference().child(Configuration.environment).child("anonymous-users").child(userId)
+                                ref.observeSingleEvent(of: .value, with: {(snapshot) in
+                                    if let dictionary = snapshot.value as? [String: String] {
+                                        let account = Account()
+                                        account.id = userId
+                                        account.toId = toUserId
+                                        account.name = Array(dictionary)[0].value
+                                        account.anonymous = true
+                                        LocalUserRepository.shared().setObject(account)
+                                        
+                                        message.account = account
+                                        self.setupMessage(message: message)
+                                        self.group.leave()
+                                        print("leave")
+                                    }
+                                })
                             }
                         })
                     }
@@ -161,13 +189,12 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
         let ref = Database.database().reference().child(Configuration.environment).child("last-user-message").child(uid)
         ref.observe(.childRemoved, with: {(snapshot) in
             let accountId = snapshot.key
-            let valueDic = snapshot.value as! [String: String]
-            let messageMap = Array(valueDic)[0]
-            let messageId = messageMap.key
+            let map = snapshot.value as! [String: String]
+            let messageId = Array(map)[0].key
             DispatchQueue.main.async {
                 self.tableView.reloadData()
             }
-            let delay = Int(2 * Double(1000))
+            let delay = Int(1 * Double(1000))
             DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(delay), execute: {
                 self.messages = self.messages.filter{ $0.id != messageId }
                 self.chatLogControllers[accountId] = nil
@@ -178,7 +205,6 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
     
     func setupMessage(message: Message) {
         print("done")
-        message.account?.representedUserId = message.representedUserId()!
         messages = messages.filter{ $0.account?.id != message.account?.id! }
         self.messages.append(message)
         
@@ -245,20 +271,16 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
     
     func fetchUserAndSetNavBar() {
         
-        guard let uid = Auth.auth().currentUser?.uid else {
-            return
-        }
-        
-        if let account = LocalUserRepository.shared().loadUserFromCache(uid: uid) {
+        if let account = LocalUserRepository.shared().loadUserFromCache(uid: LocalUserRepository.currentUid) {
             self.setNavBar(account: account)
         } else {
-            Database.database().reference().child(Configuration.environment).child("users").child(uid).observeSingleEvent(of: .value, with:
+            Database.database().reference().child(Configuration.environment).child("users").child(LocalUserRepository.currentUid).observeSingleEvent(of: .value, with:
                 {(snapshot) in
                     if let dictionary = snapshot.value as? [String: AnyObject] {
                         print(dictionary)
                         let account = Account()
                         account.setValuesForKeys(dictionary)
-                        account.id = uid
+                        account.id = LocalUserRepository.currentUid
                         LocalUserRepository.shared().setObject(account)
                         self.setNavBar(account: account)
                     }
@@ -290,20 +312,8 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
         
     }
     
-    func showChatLogController(selectedAccount: Account, accounts: [Account]) {
-        if let chatLogController = chatLogControllers[selectedAccount.id!] {
-            navigationController?.pushViewController(chatLogController, animated: true)
-        } else {
-            let chatLogController = ChatLogController(collectionViewLayout: UICollectionViewFlowLayout())
-            chatLogController.accounts = accounts
-            chatLogController.account = selectedAccount
-            chatLogControllers[selectedAccount.id!] = chatLogController
-            navigationController?.pushViewController(chatLogController, animated: true)
-        }
-    }
-    
     @objc func handleLogout() {
-        
+        let uid = Auth.auth().currentUser?.uid
         do {
             try Auth.auth().signOut()
         } catch let logoutError {
@@ -312,6 +322,10 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
         let loginController = LoginController()
         loginController.messageController = self
         present(loginController, animated: true, completion: nil)
+        
+        guard let uidValue = uid else {return}
+        let ref = Database.database().reference().child(Configuration.environment).child("users").child(uidValue).child("token")
+        ref.setValue("none")
         
     }
     
