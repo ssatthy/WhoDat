@@ -170,8 +170,6 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
                                         
                                         message.account = account
                                         self.setupMessage(message: message)
-                                        self.group.leave()
-                                        print("leave")
                                     }
                                 })
                             }
@@ -183,10 +181,8 @@ class MessageController: UITableViewController, GADBannerViewDelegate {
     }
 
     func observeRemovedMessage() {
-        guard let uid = Auth.auth().currentUser?.uid else {
-            return
-        }
-        let ref = Database.database().reference().child(Configuration.environment).child("last-user-message").child(uid)
+    
+        let ref = Database.database().reference().child(Configuration.environment).child("last-user-message").child(LocalUserRepository.currentUid)
         ref.observe(.childRemoved, with: {(snapshot) in
             let accountId = snapshot.key
             let map = snapshot.value as! [String: String]

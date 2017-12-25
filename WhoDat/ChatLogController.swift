@@ -182,7 +182,7 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
         Database.database().reference().child(Configuration.environment).child("failed-attempt").child(LocalUserRepository.currentUid).child(account!.id!).observe(.value, with: {(snapshot) in
             if let _ = snapshot.value as? Int {
                 if self.account!.found == "missed" {
-                    let alert = UIAlertController(title: "You Missed It!", message: "You failed to guess this person correctly.", preferredStyle: .alert)
+                    let alert = UIAlertController(title: "You Missed It!", message: "You had one chance. But you failed to guess this person correctly.", preferredStyle: .alert)
                     alert.addAction(UIAlertAction(title: "Ok", style: .default, handler: nil))
                     self.present(alert, animated: true, completion: nil)
                     

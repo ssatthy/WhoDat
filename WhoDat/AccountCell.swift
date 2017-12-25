@@ -101,8 +101,7 @@ class AccountCell: UITableViewCell {
     
     func setupUnread() {
         unread.isHidden = true
-        guard let uid = Auth.auth().currentUser?.uid else {return}
-        let ref = Database.database().reference().child(Configuration.environment).child("last-user-message-read").child(uid).child(message!.account!.id!)
+        let ref = Database.database().reference().child(Configuration.environment).child("last-user-message-read").child(LocalUserRepository.currentUid).child(message!.account!.id!)
         ref.observe(.value, with: {(snapshot) in
             print("read observed")
             print(snapshot)

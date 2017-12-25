@@ -50,28 +50,34 @@ class NewMessageController: UITableViewController, InviteDelegate  {
         let keys = [CNContactPhoneNumbersKey]
         let request = CNContactFetchRequest(keysToFetch: keys as [CNKeyDescriptor])
         do {
+            let characterset = NSCharacterSet(charactersIn:"+0123456789")
             try self.contactStore.enumerateContacts(with: request) {
                 (contact, stop) in
                 for phoneNumber in contact.phoneNumbers {
                     var number = phoneNumber.value.value(forKey: "digits") as! String
-                    let code = phoneNumber.value.value(forKey: "countryCode") as! String
-                    if !number.starts(with: "+"), let phoneCode =  LocalUserRepository.shared().getPhoneCode(countryCode: code) {
-                        number = phoneCode + number
+                    if number.rangeOfCharacter(from: characterset.inverted) != nil {
+                        print("invalid phone: \(number)")
+                    } else {
+                        let code = phoneNumber.value.value(forKey: "countryCode") as! String
+                        if !number.starts(with: "+"), let phoneCode =  LocalUserRepository.shared().getPhoneCode(countryCode: code) {
+                            number = phoneCode + number
+                        }
+                        
+                        let userRef = Database.database().reference().child(Configuration.environment).child("phones").child(number)
+                        userRef.observeSingleEvent(of: .value, with: {(snapshot) in
+                            if let userId = snapshot.value as? String {
+                                print("phone exists: \(number)")
+                                print(snapshot)
+                                if userId == LocalUserRepository.currentUid {return}
+                                
+                                let connectionRef = Database.database().reference().child(Configuration.environment).child("connections").child(LocalUserRepository.currentUid)
+                                connectionRef.updateChildValues([userId : "none"])
+                                let connectionOtherRef = Database.database().reference().child(Configuration.environment).child("connections").child(userId)
+                                connectionOtherRef.updateChildValues([LocalUserRepository.currentUid : "none"])
+                            }
+                        })
                     }
                     
-                    let userRef = Database.database().reference().child(Configuration.environment).child("phones").child(number)
-                    userRef.observeSingleEvent(of: .value, with: {(snapshot) in
-                        if let userId = snapshot.value as? String {
-                            print("phone exists: \(number)")
-                            print(snapshot)
-                            if userId == LocalUserRepository.currentUid {return}
-                            
-                            let connectionRef = Database.database().reference().child(Configuration.environment).child("connections").child(LocalUserRepository.currentUid)
-                            connectionRef.updateChildValues([userId : "none"])
-                            let connectionOtherRef = Database.database().reference().child(Configuration.environment).child("connections").child(userId)
-                            connectionOtherRef.updateChildValues([LocalUserRepository.currentUid : "none"])
-                        }
-                    })
                     
                 }
             }
