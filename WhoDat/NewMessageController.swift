@@ -70,10 +70,24 @@ class NewMessageController: UITableViewController, InviteDelegate  {
                                 print(snapshot)
                                 if userId == LocalUserRepository.currentUid {return}
                                 
-                                let connectionRef = Database.database().reference().child(Configuration.environment).child("connections").child(LocalUserRepository.currentUid)
-                                connectionRef.updateChildValues([userId : "none"])
-                                let connectionOtherRef = Database.database().reference().child(Configuration.environment).child("connections").child(userId)
-                                connectionOtherRef.updateChildValues([LocalUserRepository.currentUid : "none"])
+                                let connectionRef = Database.database().reference().child(Configuration.environment).child("connections").child(LocalUserRepository.currentUid).child(userId)
+                                //connectionRef.updateChildValues([userId : "none"])
+                                connectionRef.runTransactionBlock({(currentValue) -> TransactionResult in
+                                    if let _ = currentValue.value as? String {}
+                                    else {
+                                       currentValue.value = "none"
+                                    }
+                                    return TransactionResult.success(withValue: currentValue)
+                                })
+                                let connectionOtherRef = Database.database().reference().child(Configuration.environment).child("connections").child(userId).child(LocalUserRepository.currentUid)
+                                //connectionOtherRef.updateChildValues([LocalUserRepository.currentUid : "none"])
+                                connectionOtherRef.runTransactionBlock({(currentValue) -> TransactionResult in
+                                    if let _ = currentValue.value as? String {}
+                                    else {
+                                        currentValue.value = "none"
+                                    }
+                                    return TransactionResult.success(withValue: currentValue)
+                                })
                             }
                         })
                     }
