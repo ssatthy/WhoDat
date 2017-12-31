@@ -170,7 +170,7 @@ class NewMessageController: UITableViewController, InviteDelegate  {
     }
     
     @objc func handleInvite() {
-        let objectsToShare = ["Hey there!, just try this one out! https://itunes.apple.com/us/app/whodat-anonymous-until-not/id1323692195?ls=1&mt=8"]
+        let objectsToShare = ["Hey there! just try this one out! \niOS: https://itunes.apple.com/us/app/whodat-anonymous-until-not/id1323692195?ls=1&mt=8 \nAndroid: https://play.google.com/store/apps/details?id=com.likethatalsocan.whodat"]
         let activityController = UIActivityViewController(
             activityItems: objectsToShare,
             applicationActivities: nil)

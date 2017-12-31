@@ -75,7 +75,11 @@ class ChatLogController: UICollectionViewController, UITextFieldDelegate, UIColl
             if let textField = alert.textFields?[0], let text = textField.text {
                 let ref = Database.database().reference().child(Configuration.environment).child("user-report").child(LocalUserRepository.currentUid)
                 let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .long, timeStyle: .long)
-                ref.updateChildValues([ self.account!.id! + timestamp : text])
+                if self.account!.anonymous {
+                    ref.updateChildValues([ self.account!.toId! + timestamp : text])
+                } else {
+                    ref.updateChildValues([ self.account!.id! + timestamp : text])
+                }
             }
         }))
         
